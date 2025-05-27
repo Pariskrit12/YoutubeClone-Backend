@@ -13,4 +13,9 @@ app.use(express.urlencoded({extended:true,limit:"16kb"}));// Parse URL-encoded d
 app.use(express.static("public"));// Serve static files (HTML, CSS, JS, images, etc.) from the "public" directory
 app.use(cookieParser());// Parse cookies from the HTTP request headers and make them accessible via req.cookies
 
+
+//import routes
+import userRouter from "./routes/user.routes.js"
+app.use("/api/v1/users",userRouter);
+
 export {app};
