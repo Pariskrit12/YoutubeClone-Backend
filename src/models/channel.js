@@ -1,7 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
 const channelSchema=new Schema({
-    name:{
+    channelName:{
         type:String,
         required:true,
         unique:true,
@@ -28,13 +28,20 @@ const channelSchema=new Schema({
         unique:true
     },
 
-    subscribers:[{
+    ownerName:{
+        type:String,
+        required:true,
+    },
+
+    subscribers:[
+        {
         type:Schema.Types.ObjectId,
         ref:"User"
-    }
+        }
     ],
 
-    videos:[{
+    videos:[
+        {
         type:Schema.Types.ObjectId,
         ref:"Video"
     }],
