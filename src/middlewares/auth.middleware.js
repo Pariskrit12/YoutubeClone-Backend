@@ -14,7 +14,7 @@ const verifyJwt=asyncHandler(async(req,res,next)=>{
         const decodedToken=jwt.verify(token,process.env.ACCESS_TOKEN_SECRET);//verify the user token with the secret key
         const user=await User.findById(decodedToken?._id);
         if(!user){
-            throw new ApiError("401","Invalid access token");
+            throw new ApiError(401,"Invalid access token");
         }
 
         req.user=user;//save the user information in the req.user
