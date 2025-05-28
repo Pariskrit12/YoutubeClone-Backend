@@ -18,4 +18,7 @@ app.use(cookieParser());// Parse cookies from the HTTP request headers and make 
 import userRouter from "./routes/user.routes.js"
 app.use("/api/v1/users",userRouter);
 
+import channelRouter from "./routes/channel.routes.js"
+app.use("/api/v1/channels",channelRouter);
+
 export {app};
