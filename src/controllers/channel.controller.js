@@ -5,6 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
+//create channel
 const createChannel = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
@@ -56,4 +57,30 @@ const createChannel = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, channel, "Channel created successfully"));
 });
 
-export { createChannel };
+//Delete channel
+const deleteChannel=asyncHandler(async(req,res)=>{
+
+    const {channelId}=req.params
+
+    const userId=req.user?._id
+
+    const channel=await Channel.findById(channelId);
+
+    if(!channel){
+        throw new ApiError(400,"Channel not found");
+    }
+
+    if(channel.owner.toString()!==userId.toString()){
+        throw new ApiError(400,"Only owner can delete this channel")
+    }
+
+    await Channel.findByIdAndDelete(channelId);
+
+    return res.status(201).json(
+        new ApiResponse(200,{},"Channel Deleted Successfully")
+    )
+
+
+})
+
+export { createChannel ,deleteChannel};
