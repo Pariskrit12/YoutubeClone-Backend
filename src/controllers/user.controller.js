@@ -157,4 +157,33 @@ const logoutUser = asyncHandler(async (req, res) => {
     .clearCookie("refreshToken", options)
     .json(new ApiResponse(200, {}, "User logged out successfully"));
 });
-export { register, loginUser, logoutUser };
+
+const getPersonalInfo=asyncHandler(async(req,res)=>{
+  const userId=req.user?._id;
+  
+
+  const user=await User.findById(userId).select("-password -refreshToken").populate("channel");
+
+  if(!user){
+    throw new ApiError(400,'User not found');
+  }
+
+  return res.status(201).json(
+    new ApiResponse(200,user,"User personal info fetched")
+  )
+})
+
+const getUserInfo=asyncHandler(async(req,res)=>{
+  const {userId}=req.params;
+
+  const user=await User.findById(userId).select("-password -refreshToken").populate("channel");
+
+  if(!user){
+    throw new ApiError(404,"No user found")
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200,user,"User data fetched successfully")
+  )
+})
+export { register, loginUser, logoutUser,getPersonalInfo,getUserInfo };
