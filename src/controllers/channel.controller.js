@@ -101,7 +101,7 @@ const updateChannel = asyncHandler(async (req, res) => {
 
   const userId = req.user?._id;
 
-  const updates = req.body;//only update the provided fields
+  const updates = req.body; //only update the provided fields
 
   const channel = await Channel.findById(channelId);
   if (!channel) {
@@ -115,51 +115,101 @@ const updateChannel = asyncHandler(async (req, res) => {
   const updatedChannel = await Channel.findByIdAndUpdate(
     channelId,
     { $set: updates },
-    { new: true,runValidators:true }//check for the blank space
+    { new: true, runValidators: true } //check for the blank space
   );
 
-  if(!updatedChannel){
-    throw new ApiError(500,"Something went wrong");
+  if (!updatedChannel) {
+    throw new ApiError(500, "Something went wrong");
   }
 
-  return res.status(201).json(
-    new ApiResponse(200,updatedChannel,"Successfully Updated Channel")
-  )
+  return res
+    .status(201)
+    .json(new ApiResponse(200, updatedChannel, "Successfully Updated Channel"));
 });
 
-
 //Update channel avatar
-const updateAvatarOfChannel=asyncHandler(async(req,res)=>{
-  const userId=req.user?._id;
-  const {channelId}=req.params;
+const updateAvatarOfChannel = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+  const { channelId } = req.params;
 
-  const channel=await Channel.findById(channelId);
-  if(!channel){
-    throw new ApiError(400,"Channel not found");
+  const channel = await Channel.findById(channelId);
+  if (!channel) {
+    throw new ApiError(400, "Channel not found");
   }
-  if(!channel?.owner.equals(userId)){
-    throw new ApiError(400,"Only owner can change the avatar")
-  }
-
-  const avatarLocalPath=await req.file?.path;
-  if(!avatarLocalPath){
-    throw new ApiError(400,"Avatar file required");
-  }
-  const avatar=await uploadOnCloudinary(avatarLocalPath);
-
-  if(!avatar){
-    throw new ApiError(400,"Avatar required");
+  if (!channel?.owner.equals(userId)) {
+    throw new ApiError(400, "Only owner can change the avatar");
   }
 
-  const updatedChannel=await Channel.findByIdAndUpdate(channelId,{avatar:avatar.url});
+  const avatarLocalPath = await req.file?.path;
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file required");
+  }
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
 
-  if(!updatedChannel){
-    throw new ApiError(500,'Something went wrong');
+  if (!avatar) {
+    throw new ApiError(400, "Avatar required");
   }
 
-  return res.status(201).json(
-    new ApiResponse(200,updatedChannel,"Channel avatar updated successfully")
-  )
-})
+  const updatedChannel = await Channel.findByIdAndUpdate(channelId, {
+    avatar: avatar.url,
+  }).select("avatar");
 
-export { createChannel, deleteChannel, getChannelInfo,updateChannel,updateAvatarOfChannel };
+  if (!updatedChannel) {
+    throw new ApiError(500, "Something went wrong");
+  }
+
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(
+        200,
+        updatedChannel,
+        "Channel avatar updated successfully"
+      )
+    );
+});
+
+const updateBannerofChannel = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+  const { channelId } = req.params;
+
+  const channel = await Channel.findById(channelId);
+  if (!channel) {
+    throw new ApiError(400, "Channel not found");
+  }
+
+  if (!channel?.owner.equals(userId)) {
+    throw new ApiError(400, "Only owner can delete the channel");
+  }
+
+  const bannerLocalPath = await req.file?.path;
+  if (!bannerLocalPath) {
+    throw new ApiError(400, "Banner file required");
+  }
+
+  const banner = await uploadOnCloudinary(bannerLocalPath);
+
+  if (!banner) {
+    throw new ApiError(400, "Banner file required");
+  }
+
+  const updatedChannel = await Channel.findByIdAndUpdate(channelId, {
+    banner: banner.url,
+  }).select("banner");
+
+  if (!updatedChannel) {
+    throw new ApiError(400, "Something went wrong");
+  }
+  return res
+    .status(201)
+    .json(new ApiResponse(400, updatedChannel, "Channel updated Successfully"));
+});
+
+export {
+  createChannel,
+  deleteChannel,
+  getChannelInfo,
+  updateChannel,
+  updateAvatarOfChannel,
+  updateBannerofChannel,
+};
