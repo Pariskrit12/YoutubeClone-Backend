@@ -1,4 +1,5 @@
 import { Channel } from "../models/channel.js";
+import { User } from "../models/User.js";
 
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -12,6 +13,15 @@ const createChannel = asyncHandler(async (req, res) => {
   // const user=await User.findById(userId).select("username");
 
   // console.log(user.username);
+
+  const user=await User.findById(userId);
+  if(!user){
+    throw new ApiError(400,"User not found")
+  }
+
+  if (user.channel){
+    throw new ApiError(400,"User already has one channel");
+  }
 
   const { channelName, description } = req.body;
 
@@ -47,6 +57,9 @@ const createChannel = asyncHandler(async (req, res) => {
     owner: userId,
     ownerName: req.user?.username,
   });
+
+  user.channel=channel._id;
+  await user.save();
 
   if (!channel) {
     throw new ApiError(500, "Something went wrong in creating channel");
@@ -169,6 +182,7 @@ const updateAvatarOfChannel = asyncHandler(async (req, res) => {
     );
 });
 
+//update channel banner
 const updateBannerofChannel = asyncHandler(async (req, res) => {
   const userId = req.user?._id;
   const { channelId } = req.params;
