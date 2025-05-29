@@ -5,6 +5,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { v2 as cloudinary } from "cloudinary";
 
 //create channel
 const createChannel = asyncHandler(async (req, res) => {
@@ -14,13 +15,13 @@ const createChannel = asyncHandler(async (req, res) => {
 
   // console.log(user.username);
 
-  const user=await User.findById(userId);
-  if(!user){
-    throw new ApiError(400,"User not found")
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
   }
 
-  if (user.channel){
-    throw new ApiError(400,"User already has one channel");
+  if (user.channel) {
+    throw new ApiError(400, "User already has one channel");
   }
 
   const { channelName, description } = req.body;
@@ -53,12 +54,14 @@ const createChannel = asyncHandler(async (req, res) => {
     channelName,
     description,
     avatar: avatar?.url || "",
+    avatarPublicId: avatar?.public_id || "",
     banner: banner?.url || "",
+    bannerPublicId: banner?.public_id || "",
     owner: userId,
     ownerName: req.user?.username,
   });
 
-  user.channel=channel._id;
+  user.channel = channel._id;
   await user.save();
 
   if (!channel) {
@@ -76,6 +79,12 @@ const deleteChannel = asyncHandler(async (req, res) => {
 
   const userId = req.user?._id;
 
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+
   const channel = await Channel.findById(channelId);
 
   if (!channel) {
@@ -86,7 +95,16 @@ const deleteChannel = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Only owner can delete this channel");
   }
 
+  if (channel.avatarPublicId) {
+    await cloudinary.uploader.destroy(channel.avatarPublicId);//remove the file from cloudinary
+  }
+  if (channel.bannerPublicId) {
+    await cloudinary.uploader.destroy(channel.bannerPublicId);
+  }
   await Channel.findByIdAndDelete(channelId);
+
+  user.channel = null;//remove the channel id from the userSchema
+  await user.save();
 
   return res
     .status(201)
