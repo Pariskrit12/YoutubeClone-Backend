@@ -58,29 +58,108 @@ const createChannel = asyncHandler(async (req, res) => {
 });
 
 //Delete channel
-const deleteChannel=asyncHandler(async(req,res)=>{
+const deleteChannel = asyncHandler(async (req, res) => {
+  const { channelId } = req.params;
 
-    const {channelId}=req.params
+  const userId = req.user?._id;
 
-    const userId=req.user?._id
+  const channel = await Channel.findById(channelId);
 
-    const channel=await Channel.findById(channelId);
+  if (!channel) {
+    throw new ApiError(400, "Channel not found");
+  }
 
-    if(!channel){
-        throw new ApiError(400,"Channel not found");
-    }
+  if (channel.owner.toString() !== userId.toString()) {
+    throw new ApiError(400, "Only owner can delete this channel");
+  }
 
-    if(channel.owner.toString()!==userId.toString()){
-        throw new ApiError(400,"Only owner can delete this channel")
-    }
+  await Channel.findByIdAndDelete(channelId);
 
-    await Channel.findByIdAndDelete(channelId);
+  return res
+    .status(201)
+    .json(new ApiResponse(200, {}, "Channel Deleted Successfully"));
+});
 
-    return res.status(201).json(
-        new ApiResponse(200,{},"Channel Deleted Successfully")
-    )
+//get channel information
+const getChannelInfo = asyncHandler(async (req, res) => {
+  const { channelId } = req.params;
+
+  const channel = await Channel.findById(channelId);
+
+  if (!channel) {
+    throw new ApiError(400, "channel not found");
+  }
+
+  return res
+    .status(201)
+    .json(new ApiResponse(200, channel, "Channel info fetched successfully"));
+});
+
+//Update channel name,description
+const updateChannel = asyncHandler(async (req, res) => {
+  const { channelId } = req.params;
+
+  const userId = req.user?._id;
+
+  const updates = req.body;//only update the provided fields
+
+  const channel = await Channel.findById(channelId);
+  if (!channel) {
+    throw new ApiError(400, "Channel not found");
+  }
+
+  if (!channel?.owner.equals(userId)) {
+    throw new ApiError(400, "Only the owner can update the channel");
+  }
+
+  const updatedChannel = await Channel.findByIdAndUpdate(
+    channelId,
+    { $set: updates },
+    { new: true,runValidators:true }//check for the blank space
+  );
+
+  if(!updatedChannel){
+    throw new ApiError(500,"Something went wrong");
+  }
+
+  return res.status(201).json(
+    new ApiResponse(200,updatedChannel,"Successfully Updated Channel")
+  )
+});
 
 
+//Update channel avatar
+const updateAvatarOfChannel=asyncHandler(async(req,res)=>{
+  const userId=req.user?._id;
+  const {channelId}=req.params;
+
+  const channel=await Channel.findById(channelId);
+  if(!channel){
+    throw new ApiError(400,"Channel not found");
+  }
+  if(!channel?.owner.equals(userId)){
+    throw new ApiError(400,"Only owner can change the avatar")
+  }
+
+  const avatarLocalPath=await req.file?.path;
+  if(!avatarLocalPath){
+    throw new ApiError(400,"Avatar file required");
+  }
+  const avatar=await uploadOnCloudinary(avatarLocalPath);
+
+  if(!avatar){
+    throw new ApiError(400,"Avatar required");
+  }
+
+  const updatedChannel=await Channel.findByIdAndUpdate(channelId,{avatar:avatar.url});
+
+  if(!updatedChannel){
+    throw new ApiError(500,'Something went wrong');
+  }
+
+  return res.status(201).json(
+    new ApiResponse(200,updatedChannel,"Channel avatar updated successfully")
+  )
 })
 
-export { createChannel ,deleteChannel};
+export { createChannel, deleteChannel, getChannelInfo,updateChannel,updateAvatarOfChannel };
