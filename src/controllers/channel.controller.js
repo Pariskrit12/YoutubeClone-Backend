@@ -6,7 +6,11 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
+import { Filter } from "bad-words";
 
+const filter=new Filter();
+
+filter.addWords("nsfw","porn","sex","xxx","fuck")
 
 //create channel
 const createChannel = asyncHandler(async (req, res) => {
