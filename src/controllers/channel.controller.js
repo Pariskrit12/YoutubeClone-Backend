@@ -96,14 +96,14 @@ const deleteChannel = asyncHandler(async (req, res) => {
   }
 
   if (channel.avatarPublicId) {
-    await cloudinary.uploader.destroy(channel.avatarPublicId);//remove the file from cloudinary
+    await cloudinary.uploader.destroy(channel.avatarPublicId); //remove the file from cloudinary
   }
   if (channel.bannerPublicId) {
     await cloudinary.uploader.destroy(channel.bannerPublicId);
   }
   await Channel.findByIdAndDelete(channelId);
 
-  user.channel = null;//remove the channel id from the userSchema
+  user.channel = null; //remove the channel id from the userSchema
   await user.save();
 
   return res
@@ -181,9 +181,17 @@ const updateAvatarOfChannel = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar required");
   }
 
-  const updatedChannel = await Channel.findByIdAndUpdate(channelId, {
-    avatar: avatar.url,
-  }).select("avatar");
+  const updatedChannel = await Channel.findByIdAndUpdate(
+    channelId,
+    {
+      avatar: avatar.url,
+      avatarPublicId: avatar.public_id,
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
+  ).select("avatar");
 
   if (!updatedChannel) {
     throw new ApiError(500, "Something went wrong");
@@ -225,9 +233,14 @@ const updateBannerofChannel = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Banner file required");
   }
 
-  const updatedChannel = await Channel.findByIdAndUpdate(channelId, {
-    banner: banner.url,
-  }).select("banner");
+  const updatedChannel = await Channel.findByIdAndUpdate(
+    channelId,
+    {
+      banner: banner.url,
+      bannerPublicId: banner.public_id,
+    },
+    { new: true, runValidators: true }
+  ).select("banner");
 
   if (!updatedChannel) {
     throw new ApiError(400, "Something went wrong");
@@ -236,6 +249,8 @@ const updateBannerofChannel = asyncHandler(async (req, res) => {
     .status(201)
     .json(new ApiResponse(400, updatedChannel, "Channel updated Successfully"));
 });
+
+
 
 export {
   createChannel,
