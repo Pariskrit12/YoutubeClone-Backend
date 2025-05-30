@@ -7,6 +7,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
 
+
 //create channel
 const createChannel = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -30,6 +31,9 @@ const createChannel = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All Fields are required");
   }
 
+  if(filter.isProfane(channelName) || filter.isProfane(description)){
+    throw new ApiError(400,"Inappropriate language is not allowed");
+  }
   const avatarLocalPath = req.files?.avatar[0]?.path; //url
   const bannerLocalPath = req.files?.banner[0]?.path;
 
