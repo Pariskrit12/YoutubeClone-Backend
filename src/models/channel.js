@@ -17,9 +17,15 @@ const channelSchema=new Schema({
         type:String,
         default:""
     },
+    avatarPublicId:{
+        type:String
+    },
     banner:{
         type:String,
         default:""
+    },
+    bannerPublicId:{
+        type:String
     },
     owner:{
         type:Schema.Types.ObjectId,

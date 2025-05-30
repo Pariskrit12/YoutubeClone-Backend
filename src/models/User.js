@@ -62,6 +62,9 @@ const userSchema = new Schema(
       required: true,
     },
 
+    avatarPublicId:{
+      type:String
+    },
     watchHistory: [
       {
         type: Schema.Types.ObjectId,
