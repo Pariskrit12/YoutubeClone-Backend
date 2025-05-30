@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/User.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { v2 as cloudinary } from "cloudinary";
 
 //Generate Refresh Token and Access Token
 const generateAccessTokenAndRefreshToken = async (userId) => {
@@ -70,6 +71,7 @@ const register = asyncHandler(async (req, res) => {
     email,
     password,
     avatar: avatar.url,
+    avatarPublicId: avatar.public_id || "",
   });
 
   const createdUser = await User.findById(user._id).select(
@@ -193,20 +195,66 @@ const getUserInfo = asyncHandler(async (req, res) => {
 });
 
 //update user's name,username
-const updateUserInfo=asyncHandler(async(req,res)=>{
-  const userId=req.user?._id;
+const updateUserInfo = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
 
-  const updates=req.body;
+  const updates = req.body;
 
-  const userUpdated=await User.findByIdAndUpdate(userId,{$set:updates},{new:true,runValidators:true}).select("username name");
+  const userUpdated = await User.findByIdAndUpdate(
+    userId,
+    { $set: updates },
+    { new: true, runValidators: true }
+  ).select("username name");
 
-  if(!userUpdated){
-    throw new ApiError(400,"Something went wrong while updating user info")
+  if (!userUpdated) {
+    throw new ApiError(400, "Something went wrong while updating user info");
   }
 
-  return res.status(201).json(
-    new ApiResponse(200,userUpdated,"user info updated successfully")
-  )
+  return res
+    .status(201)
+    .json(new ApiResponse(200, userUpdated, "user info updated successfully"));
+});
 
-})
-export { register, loginUser, logoutUser, getPersonalInfo, getUserInfo,updateUserInfo };
+//update user's avatar
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+  const user = await User.findById(userId);
+
+  const avatarLocalPath = req.file?.path;
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is required");
+  }
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+  if (!avatar) {
+    throw new ApiError(500, "Avatar upload failed");
+  }
+
+  if (user.avatarPublicId) {
+    await cloudinary.uploader.destroy(user.avatarPublicId);
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { avatar: avatar.url, avatarPublicId: avatar.public_id },
+    { new: true, runValidators: true }
+  ).select("avatar");
+
+  if (!updatedUser) {
+    throw new ApiError(500, "Something went wrong");
+  }
+
+  return res
+    .status(201)
+    .json(new ApiResponse(200, updatedUser, "Updated user avatar"));
+});
+
+export {
+  register,
+  loginUser,
+  logoutUser,
+  getPersonalInfo,
+  getUserInfo,
+  updateUserInfo,
+  updateUserAvatar,
+};
