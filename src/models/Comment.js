@@ -7,13 +7,13 @@ const commentSchema = new Schema({
     trim: true,
   },
 
-  author: {
+  authorId: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
 
-  video: {
+  videoId: {
     type: Schema.Types.ObjectId,
     ref: "Video",
     required: true,
@@ -23,6 +23,7 @@ const commentSchema = new Schema({
     {
       type: Schema.Types.ObjectId,
       ref: "Comment",
+      default:null
     }
   ],
 
@@ -30,6 +31,7 @@ const commentSchema = new Schema({
     {
       type: Schema.Types.ObjectId,
       ref: "User",
+      default:[],
     }
   ]
 }, { timestamps: true });
