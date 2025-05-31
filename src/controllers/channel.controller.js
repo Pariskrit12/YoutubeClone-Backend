@@ -8,9 +8,9 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
 import { Filter } from "bad-words";
 
-const filter=new Filter();
+const filter = new Filter();
 
-filter.addWords("nsfw","porn","sex","xxx","fuck")
+filter.addWords("nsfw", "porn", "sex", "xxx", "fuck");
 
 //create channel
 const createChannel = asyncHandler(async (req, res) => {
@@ -35,8 +35,8 @@ const createChannel = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All Fields are required");
   }
 
-  if(filter.isProfane(channelName) || filter.isProfane(description)){
-    throw new ApiError(400,"Inappropriate language is not allowed");
+  if (filter.isProfane(channelName) || filter.isProfane(description)) {
+    throw new ApiError(400, "Inappropriate language is not allowed");
   }
   const avatarLocalPath = req.files?.avatar[0]?.path; //url
   const bannerLocalPath = req.files?.banner[0]?.path;
@@ -257,8 +257,6 @@ const updateBannerofChannel = asyncHandler(async (req, res) => {
     .status(201)
     .json(new ApiResponse(400, updatedChannel, "Channel updated Successfully"));
 });
-
-
 
 export {
   createChannel,
