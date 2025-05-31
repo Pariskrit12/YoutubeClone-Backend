@@ -8,6 +8,10 @@ app.use(cors({
     credentials:true
 }))
 
+
+
+// changed thsi file and pushed
+
 app.use(express.json({limit:"16kb"}));// Parse incoming JSON requests and limit the payload size to 16KB for security and performance
 app.use(express.urlencoded({extended:true,limit:"16kb"}));// Parse URL-encoded data (from forms) with extended support for rich objects, limit payload to 16KB
 app.use(express.static("public"));// Serve static files (HTML, CSS, JS, images, etc.) from the "public" directory
