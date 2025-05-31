@@ -2,7 +2,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import {Channel} from "../models/channel.js"
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/User.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { videoQueue } from "../queues/videoQueue.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 const uploadVideo=asyncHandler(async(req,res)=>{

@@ -14,4 +14,9 @@ redisClient.on("error", (err) => {
 redisClient.on("connect",()=>{
     console.error("Connected to redis");
 })
-export {redisClient};
+
+const redisOptions = {
+  host: "127.0.0.1",
+  port: 6379,
+};
+export {redisClient,redisOptions};
