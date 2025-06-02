@@ -2,7 +2,7 @@ import Redis from "ioredis";
 
 // Create a Redis client instance and connect to local Redis server at 127.0.0.1:6379
 const redisClient = new Redis({
-  host: "127.0.0.1",
+  host: "localhost",
   port: 6379,
 });
 
@@ -16,7 +16,7 @@ redisClient.on("connect",()=>{
 })
 
 const redisOptions = {
-  host: "127.0.0.1",
+  host: "localhost",
   port: 6379,
 };
 export {redisClient,redisOptions};
