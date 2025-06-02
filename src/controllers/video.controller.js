@@ -4,6 +4,9 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/User.js";
 import { videoQueue } from "../queues/videoQueue.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { Video } from "../models/Video.js";
+
+//Upload Video
 const uploadVideo = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
   const userId = req.user?._id;
@@ -49,9 +52,73 @@ const uploadVideo = asyncHandler(async (req, res) => {
       videoLocalPath,
       thumbnailPath,
     },
-    { attempts: 2,backoff:5000,removeOnComplete:true,removeOnFail:false }
+    { attempts: 2, backoff: 5000, removeOnComplete: true, removeOnFail: false }
   );
 
   res.status(202).json(new ApiResponse(200, "Video is being processed"));
 });
-export{uploadVideo}
+
+//Get Single Video
+const getVideoInfo = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+
+  const { videoId } = req.params;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "Unauthorized access, please log in");
+  }
+
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(400, "Video not found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, video, "Information of video fetched successfully")
+    );
+});
+
+//Update video title and description
+const updateVideoInfo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  const userId = req.user?._id;
+
+  const updates = req.body;
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "Unauthorized access, Please log in");
+  }
+
+  const video = await Video.findById(videoId).populate("channel");
+  if (!video) {
+    throw new ApiError(400, "Video not found");
+  }
+
+  if (!video.channel.owner.equals(userId)) {
+    throw new ApiError(400, "You cannot edit this video");
+  }
+
+  const updatedVideo = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: updates,
+    },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedVideo) {
+    throw new ApiError(500, "Something went wrong");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedVideo, "Successfully updated video info")
+    );
+});
+
+export { uploadVideo, getVideoInfo ,updateVideoInfo};
