@@ -144,9 +144,9 @@ const updateVideoThumbnail = asyncHandler(async (req, res) => {
     await cloudinary.uploader.destroy(video.thumbnailPublicId);
   }
 
-  const thumbnaiLocalPath = req.file?.path;
+  const thumbnailLocalPath = req.file?.path;
 
-  if (!thumbnaiLocalPath) {
+  if (!thumbnailLocalPath) {
     throw new ApiError(400, "Thumbnail file required");
   }
 
@@ -182,4 +182,43 @@ const updateVideoThumbnail = asyncHandler(async (req, res) => {
     );
 });
 
-export { uploadVideo, getVideoInfo, updateVideoInfo,updateVideoThumbnail };
+const deleteVideo = asyncHandler(async (req, res) => {
+  const { channelId, videoId } = req.params;
+  const userId = req.user?._id;
+
+  const channel = await Channel.findById(channelId);
+  if (!channel) {
+    throw new ApiError(400, "Channel not found");
+  }
+
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(400, "Video not found");
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+
+  if (!channel.owner.equals(userId)) {
+    throw new ApiError(400, "You are not allowed to delete the video");
+  }
+
+  if (video.thumbnailPublicId) {
+    await cloudinary.uploader.destroy(video.thumbnailPublicId);
+  }
+  if (video.videoPublicId) {
+    await cloudinary.uploader.destroy(video.videoPublicId);
+  }
+
+  const deletedVideo = await Video.findByIdAndDelete(videoId);
+  channel.videos = channel.videos.filter((id) => !id.equals(deletedVideo._id));
+  await channel.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, deletedVideo, "Deleted video successfully"));
+});
+
+export { uploadVideo, getVideoInfo, updateVideoInfo, updateVideoThumbnail,deleteVideo };
