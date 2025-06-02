@@ -7,7 +7,7 @@ const router = Router();
 
 
 //protected routes
-router.route("/upload-video").post(
+router.route("/upload-video/:channelId").post(
   verifyJwt,
   upload.fields([
     {

@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
 import connectDB from "./db/connection.js";
 import { app } from "./app.js";
-
+import { videoWorker } from "./workers/videoWokers.js";
+import { dlqWorker } from "./workers/videoDLQwoker.js";
 dotenv.config({path:'./env'});
 
 connectDB()

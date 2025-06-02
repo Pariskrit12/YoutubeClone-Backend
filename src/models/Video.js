@@ -25,6 +25,9 @@ const videoSchema = new Schema(
       type: String,
       default: "",
     },
+    thumbnailPublicId: {
+      type: String,
+    },
 
     channel: {
       type: Schema.Types.ObjectId,
@@ -50,6 +53,11 @@ const videoSchema = new Schema(
         ref: "User",
       },
     ],
+    status: {
+      type: String,
+      enum: ["pending", "processing", "published", "corrupted"],
+      default: "pending",
+    },
 
     comments: [
       {
@@ -64,14 +72,14 @@ const videoSchema = new Schema(
         trim: true,
       },
     ],
-    duration:{
-      type:Number,
-      default:0
-    }
+    // duration: {
+    //   type: Number,
+    //   default: 0,
+    // },
   },
   { timestamps: true }
 );
-videoSchema.index({title:"text",description:"text"});
-videoSchema.index({tags:1});
+videoSchema.index({ title: "text", description: "text" });
+videoSchema.index({ tags: 1 });
 
 export const Video = mongoose.model("Video", videoSchema);

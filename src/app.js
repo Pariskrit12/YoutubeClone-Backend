@@ -25,4 +25,8 @@ app.use("/api/v1/users",userRouter);
 import channelRouter from "./routes/channel.routes.js"
 app.use("/api/v1/channels",channelRouter);
 
+
+import videoRouter from "./routes/video.routes.js"
+app.use("/api/v1/videos",videoRouter);
+
 export {app};
