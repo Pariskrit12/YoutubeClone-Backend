@@ -5,7 +5,8 @@ import { User } from "../models/User.js";
 import { videoQueue } from "../queues/videoQueue.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Video } from "../models/Video.js";
-
+import { v2 as cloudinary } from "cloudinary";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 //Upload Video
 const uploadVideo = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
@@ -121,4 +122,64 @@ const updateVideoInfo = asyncHandler(async (req, res) => {
     );
 });
 
-export { uploadVideo, getVideoInfo ,updateVideoInfo};
+const updateVideoThumbnail = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  const userId = req.user?._id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+
+  const video = await Video.findById(videoId).populate("channel");
+  if (!video) {
+    throw new ApiError(400, "Video not found");
+  }
+  if (!video.channel.owner.equals(userId)) {
+    throw new ApiError(400, "You cannot update this video thumbnail");
+  }
+
+  if (video.thumbnailPublicId) {
+    await cloudinary.uploader.destroy(video.thumbnailPublicId);
+  }
+
+  const thumbnaiLocalPath = req.file?.path;
+
+  if (!thumbnaiLocalPath) {
+    throw new ApiError(400, "Thumbnail file required");
+  }
+
+  const thumbnail = await uploadOnCloudinary(thumbnaiLocalPath);
+  if (!thumbnail) {
+    throw new ApiError(400, "Failed to upload thumbnail");
+  }
+
+  const updatedVideo = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      thumbnail: thumbnail?.url,
+      thumbnailPublicId: thumbnail?.public_id,
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
+
+  if (!updatedVideo) {
+    throw new ApiError(500, "Something went wrong");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        updatedVideo,
+        "Successfully updated thumbnail of video"
+      )
+    );
+});
+
+export { uploadVideo, getVideoInfo, updateVideoInfo,updateVideoThumbnail };
