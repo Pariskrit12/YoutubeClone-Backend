@@ -2,11 +2,12 @@ import { Router } from "express";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
-import { getVideoInfo, updateVideoInfo, updateVideoThumbnail, uploadVideo } from "../controllers/video.controller.js";
+import { deleteVideo, getVideoInfo, updateVideoInfo, updateVideoThumbnail, uploadVideo } from "../controllers/video.controller.js";
 const router = Router();
 
 
 //protected routes
+router.route("/delete-video/:videoId/:channelId").delete(verifyJwt,deleteVideo);
 router.route("/update-video-thumbnail/:videoId").put(verifyJwt,upload.single("thumbnail"),updateVideoThumbnail);
 router.route("/update-video-info/:videoId").put(verifyJwt,updateVideoInfo);
 router.route('/get-info-video/:videoId').get(verifyJwt,getVideoInfo);

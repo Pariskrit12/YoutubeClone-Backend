@@ -29,4 +29,8 @@ app.use("/api/v1/channels",channelRouter);
 import videoRouter from "./routes/video.routes.js"
 app.use("/api/v1/videos",videoRouter);
 
+
+import likeRouter from './routes/like.routes.js';
+app.use("/api/v1/likes",likeRouter);
+
 export {app};
