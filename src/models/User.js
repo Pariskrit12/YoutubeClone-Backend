@@ -3,18 +3,17 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 const userSchema = new Schema(
   {
-
-    name:{
-      type:String,
-      required:true,
-      trim:true,
+    name: {
+      type: String,
+      required: true,
+      trim: true,
     },
     username: {
       type: String,
       required: true,
       lowercase: true,
       trim: true,
-      unique:true,
+      unique: true,
     },
     email: {
       type: String,
@@ -45,6 +44,12 @@ const userSchema = new Schema(
         ref: "Video",
       },
     ],
+    dislikedVideos: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Video",
+      },
+    ],
 
     savedVideos: [
       {
@@ -62,8 +67,8 @@ const userSchema = new Schema(
       required: true,
     },
 
-    avatarPublicId:{
-      type:String
+    avatarPublicId: {
+      type: String,
     },
     watchHistory: [
       {
