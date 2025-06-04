@@ -50,6 +50,18 @@ const userSchema = new Schema(
         ref: "Video",
       },
     ],
+    likedComments: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Comment",
+      },
+    ],
+    dislikedComments: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Comment",
+      },
+    ],
 
     savedVideos: [
       {

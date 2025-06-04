@@ -40,6 +40,21 @@ const commentSchema = new Schema({
       ref: "User",
       default:[],
     }
+  ],
+
+  likesComment:[
+    {
+      type:Schema.Types.ObjectId,
+      ref:"User",
+      default:[]
+    }
+  ],
+  dislikesComment:[
+    {
+      type:Schema.Types.ObjectId,
+      ref:"User",
+      default:[]
+    }
   ]
 }, { timestamps: true });
 
