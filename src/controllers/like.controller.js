@@ -100,22 +100,98 @@ const dislikeVideo = asyncHandler(async (req, res) => {
 });
 
 //like comment
-// const likeComment = asyncHandler(async (req, res) => {
-//   const { commentId } = req.params;
+const likeComment = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
 
-//   const userId = req.user?._id;
+  const userId = req.user?._id;
 
-//   const user = await User.findById(userId);
-//   if (user) {
-//     throw new ApiError(400, "User not found");
-//   }
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
 
-//   const comment = await Comment.findById(commentId);
-//   if (!comment) {
-//     throw new ApiError(400, "Comment not found");
-//   }
+  const comment = await Comment.findById(commentId);
+  if (!comment) {
+    throw new ApiError(400, "Comment not found");
+  }
 
-//   const alreadyLiked=
-// });
+  const alreadyLiked = comment.likesComment.some(
+    (id) => id.toString() == userId.toString()
+  );
+  const isDisliked = comment.dislikesComment.some(
+    (id) => id.toString() == userId.toString()
+  );
+  if (alreadyLiked) {
+    comment.likesComment = comment.likesComment.filter(
+      (id) => id.toString() != userId.toString()
+    );
+    user.likedComments = user.likedComments.filter(
+      (id) => id.toString() != commentId.toString()
+    );
+  } else {
+    comment.likesComment.push(userId);
+    user.likedComments.push(commentId);
+  }
+  if (isDisliked) {
+    comment.dislikesComment = comment.dislikesComment.filter(
+      (id) => id.toString() != userId.toString()
+    );
+    user.dislikedComments = user.dislikedComments.filter(
+      (id) => id.toString() != commentId.toString()
+    );
+  }
+  await comment.save();
+  await user.save();
 
-export { likeVideo, dislikeVideo };
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Liked comment successfully"));
+});
+
+//dislike comment
+const dislikeComment = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+  const { commentId } = req.params;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+  const comment = await Comment.findById(commentId);
+  if (!comment) {
+    throw new ApiError(400, "Comment not found");
+  }
+
+  const alreadyDisliked = comment.dislikesComment.some(
+    (id) => id.toString() == userId.toString()
+  );
+  const isLiked = comment.likesComment.some(
+    (id) => id.toString() == userId.toString()
+  );
+  if (alreadyDisliked) {
+    comment.dislikesComment = comment.dislikesComment.filter(
+      (id) => id.toString() != userId.toString()
+    );
+    user.dislikedComments = user.dislikedComments.filter(
+      (id) => id.toString() != commentId.toString()
+    );
+  } else {
+    comment.dislikesComment.push(userId);
+    user.dislikedComments.push(commentId);
+  }
+  if (isLiked) {
+    comment.likesComment = comment.likesComment.filter(
+      (id) => id.toString() != userId.toString()
+    );
+    user.likedComments = user.likedComments.filter(
+      (id) => id.toString() != commentId.toString()
+    );
+  }
+
+  await comment.save();
+  await user.save();
+
+  return res.status(200).json(new ApiResponse(200, {}, "Disliked comment"));
+});
+
+export { likeVideo, dislikeVideo,likeComment,dislikeComment };
