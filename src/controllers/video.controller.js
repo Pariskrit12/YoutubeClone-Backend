@@ -7,6 +7,9 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Video } from "../models/Video.js";
 import { v2 as cloudinary } from "cloudinary";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { redisClient } from "../config/redis.js";
+import { calculateTrendingScore } from "../utils/trendingScore.js";
+import { calculatePopularScore } from "../utils/popularScore.js";
 //Upload Video
 const uploadVideo = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
@@ -122,6 +125,7 @@ const updateVideoInfo = asyncHandler(async (req, res) => {
     );
 });
 
+//update video thumbnail
 const updateVideoThumbnail = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
@@ -182,6 +186,7 @@ const updateVideoThumbnail = asyncHandler(async (req, res) => {
     );
 });
 
+//delete video
 const deleteVideo = asyncHandler(async (req, res) => {
   const { channelId, videoId } = req.params;
   const userId = req.user?._id;
@@ -221,4 +226,96 @@ const deleteVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, deletedVideo, "Deleted video successfully"));
 });
 
-export { uploadVideo, getVideoInfo, updateVideoInfo, updateVideoThumbnail,deleteVideo };
+//watch video
+const watchvideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const userId = req.user?._id;
+
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(400, "Video not found");
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+
+  // Redis key to track whether this user has viewed this video recently
+  const redisKey = `viewed:${userId}:${videoId}`;
+  const alreadyViewed = await redisClient.get(redisKey);
+
+  if (!alreadyViewed) {
+    //save in db
+    await Video.findByIdAndUpdate(videoId, { $inc: { views: 1 } });
+    // Set Redis key to prevent re-counting view from same user within 1 hour
+    await redisClient.set(redisKey, "1", "EX", 3600); //1 hr TTL(Time to live)
+  }
+
+  return res.status(200).json(new ApiResponse(200, {}, "viewed"));
+});
+
+//Get trending video
+const getTrendingVideo = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+  const videos = await Video.find(); //gives array of mongoose document
+
+  const videoWithScore = videos.map((video) => {
+    const score = calculateTrendingScore({
+      views: video.views,
+      likes: video.likes.length,
+      comments: video.comments.length,
+      createdAt: video.createdAt,
+    });
+    return { ...video.toObject(), trendingScore: score };
+  });
+
+  videoWithScore.sort((a, b) => b.trendingScore - a.trendingScore);
+
+  const top20Trending = videoWithScore.slice(0, 20);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, top20Trending, "Top 20 trending video"));
+});
+
+//Get popular video
+const getPopularVideo = asyncHandler(async (req, res) => {
+  const videos = await Video.find();
+
+  if (!videos) {
+    throw new ApiError(400, "Videos not found");
+  }
+
+  const videoPopularScore = videos.map((video) => {
+    const score = calculatePopularScore({
+      views: video.views,
+      likes: video.likes.length,
+      comments: video.comments.length,
+    });
+
+    return { ...video.toObject(), popularScore: score };
+  });
+  videoPopularScore.sort((a, b) => b.popularScore - a.popularScore);
+
+  const top20Post = videoPopularScore.slice(0, 20);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, top20Post, "Fetched 20 popular post"));
+});
+
+export {
+  uploadVideo,
+  getVideoInfo,
+  updateVideoInfo,
+  updateVideoThumbnail,
+  deleteVideo,
+  watchvideo,
+};
