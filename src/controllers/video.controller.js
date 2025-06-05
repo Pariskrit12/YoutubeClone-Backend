@@ -370,6 +370,31 @@ const getSubscribedChannelVideo = asyncHandler(async (req, res) => {
     );
 });
 
+const getWatchedHistoryVideo=asyncHandler(async(req,res)=>{
+
+  const page=parseInt(req.query.page)||1;
+  const limit=10;
+
+  const skip=(page-1)*10;
+
+
+  const userId=req.user?._id;
+
+  const user=await User.findById(userId).populate("watchHistory");
+  if(!user){
+    throw new ApiError(400,"User not found")
+  }
+
+  const total=user.watchHistory.length;
+  const paginatedHistory=user.watchHistory.slice(skip,skip+limit);
+
+  return res.status(200).json(
+    new ApiResponse(200,{page,total,data:paginatedHistory},"Fetched user history")
+  )
+
+
+})
+
 export {
   uploadVideo,
   getVideoInfo,
@@ -381,4 +406,5 @@ export {
   getRecentVideo,
   getTrendingVideo,
   getSubscribedChannelVideo,
+  getWatchedHistoryVideo,
 };
