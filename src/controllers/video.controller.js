@@ -331,7 +331,25 @@ const getRecentVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, top20RecentVideo, "20 recent post"));
 });
 
+const getSubscribedChannelVideo = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
 
+  const user = await User.findById(userId).populate({
+    path: "subscription",
+    populate: {
+      path: "videos",
+    },
+  });
+
+  if(!user){
+    throw new ApiResponse(400,"User not found");
+  }
+ const videos=user.subscription.flatMap((channel)=>channel.videos)
+
+  return res.status(200).json(
+    new ApiResponse(200,videos,"Fetched subscribed channel video successfully")
+  )
+});
 
 export {
   uploadVideo,
@@ -343,4 +361,5 @@ export {
   getPopularVideo,
   getRecentVideo,
   getTrendingVideo,
+  getSubscribedChannelVideo
 };
