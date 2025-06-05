@@ -72,6 +72,8 @@ const videoSchema = new Schema(
         trim: true,
       },
     ],
+
+    
     // duration: {
     //   type: Number,
     //   default: 0,
