@@ -253,6 +253,18 @@ const watchvideo = asyncHandler(async (req, res) => {
     // Set Redis key to prevent re-counting view from same user within 1 hour
     await redisClient.set(redisKey, "1", "EX", 3600); //1 hr TTL(Time to live)
   }
+  const alreadyWatched = user.watchHistory.some(
+    (id) => id.toString() == videoId.toString()
+  );
+
+  if(alreadyWatched){
+    user.watchHistory=user.watchHistory.filter((id)=>id.toString()!=videoId.toString());
+  }
+  if(user.watchHistory.length>30){
+    user.watchHistory.shift()//remove the oldest
+  }
+  user.watchHistory.push(videoId);
+  await user.save();
 
   return res.status(200).json(new ApiResponse(200, {}, "viewed"));
 });
@@ -331,6 +343,7 @@ const getRecentVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, top20RecentVideo, "20 recent post"));
 });
 
+//get subscribed channel video
 const getSubscribedChannelVideo = asyncHandler(async (req, res) => {
   const userId = req.user?._id;
 
@@ -341,14 +354,20 @@ const getSubscribedChannelVideo = asyncHandler(async (req, res) => {
     },
   });
 
-  if(!user){
-    throw new ApiResponse(400,"User not found");
+  if (!user) {
+    throw new ApiResponse(400, "User not found");
   }
- const videos=user.subscription.flatMap((channel)=>channel.videos)
+  const videos = user.subscription.flatMap((channel) => channel.videos);
 
-  return res.status(200).json(
-    new ApiResponse(200,videos,"Fetched subscribed channel video successfully")
-  )
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        videos,
+        "Fetched subscribed channel video successfully"
+      )
+    );
 });
 
 export {
@@ -361,5 +380,5 @@ export {
   getPopularVideo,
   getRecentVideo,
   getTrendingVideo,
-  getSubscribedChannelVideo
+  getSubscribedChannelVideo,
 };
