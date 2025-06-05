@@ -10,6 +10,8 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { redisClient } from "../config/redis.js";
 import { calculateTrendingScore } from "../utils/trendingScore.js";
 import { calculatePopularScore } from "../utils/popularScore.js";
+import { calculateRecentScore } from "../utils/recentScore.js";
+import { application } from "express";
 //Upload Video
 const uploadVideo = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
@@ -311,6 +313,26 @@ const getPopularVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, top20Post, "Fetched 20 popular post"));
 });
 
+//get recent video
+const getRecentVideo = asyncHandler(async (req, res) => {
+  const videos = await Video.find();
+
+  const videoWithScore = videos.map((video) => {
+    const score = calculateRecentScore(video.createdAt);
+    return { ...video.toObject(), recencyScore: score };
+  });
+
+  videoWithScore.sort((a, b) => a.recencyScore - b.recencyScore); //Sort array in ascending order
+
+  const top20RecentVideo = videoWithScore.slice(0, 20);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, top20RecentVideo, "20 recent post"));
+});
+
+
+
 export {
   uploadVideo,
   getVideoInfo,
@@ -318,4 +340,7 @@ export {
   updateVideoThumbnail,
   deleteVideo,
   watchvideo,
+  getPopularVideo,
+  getRecentVideo,
+  getTrendingVideo,
 };
