@@ -249,6 +249,53 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, updatedUser, "Updated user avatar"));
 });
 
+const changePassword = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+
+  const { oldPassword, newPassword, confirmPassword } = req.body;
+
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    throw new ApiError(400, "All fields are required");
+  }
+
+  const isCorrectPassword = await user.isPasswordCorrect(oldPassword);
+  if (!isCorrectPassword) {
+    throw new ApiError(400, "Incorrect old password");
+  }
+
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+  const isNewPasswordValid = passwordRegex.test(newPassword);
+  if (!isNewPasswordValid) {
+    throw new ApiError(
+      400,
+      "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character"
+    );
+  }
+  if (!(newPassword === confirmPassword)) {
+    throw new ApiError(400, "Password is not same");
+  }
+
+  user.password = newPassword;
+  user.refreshToken = null;
+  await user.save();
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(201)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "Successfully updated user password"));
+});
+
 export {
   register,
   loginUser,
