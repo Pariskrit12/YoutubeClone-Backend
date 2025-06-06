@@ -5,7 +5,6 @@ import { User } from "../models/User.js";
 import { Comment } from "../models/Comment.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { calculateRecentScore } from "../utils/recentScore.js";
-import { calculatePopularScore } from "../utils/popularScore.js";
 import { calculateCommentPopularScore } from "../utils/calculateCommentPopularScore.js";
 
 //create comment
@@ -167,7 +166,55 @@ const updateComment = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, updatedComment, "Comment updated successfully"));
 });
 
-//like and dislike comments
+//like comments
+const likedComments = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+  const userId = req.user?._id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+
+  const comment = await Comment.findById(commentId);
+  if (!comment) {
+    throw new ApiError(400, "Comment not found");
+  }
+
+  const alreadyLiked = comment.likes.some(
+    (id) => id.toString() === userId.toString()
+  );
+  const isDisliked = comment.dislikes.some(
+    (id) => id.toString() === userId.toString()
+  );
+
+  if (alreadyLiked) {
+    comment.likes = comment.likes.filter(
+      (id) => id.toString() !== userId.toString()
+    );
+    user.likedComments = user.likedComments.filter(
+      (id) => id.toString() !== commentId.toString()
+    );
+  } else {
+    comment.likes.push(userId);
+    user.likedComments.push(commentId);
+  }
+  if (isDisliked) {
+    comment.dislikes = comment.dislikes.filter(
+      (id) => id.toString() !== userId.toString()
+    );
+    user.dislikedComments = user.dislikedComments.filter(
+      (id) => id.toString() !== commentId.toString()
+    );
+  }
+
+  await comment.save();
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Liked comment successfully"));
+});
 
 //pagination and sorting comments
 const recentComments = asyncHandler(async (req, res) => {
