@@ -257,11 +257,13 @@ const watchvideo = asyncHandler(async (req, res) => {
     (id) => id.toString() == videoId.toString()
   );
 
-  if(alreadyWatched){
-    user.watchHistory=user.watchHistory.filter((id)=>id.toString()!=videoId.toString());
+  if (alreadyWatched) {
+    user.watchHistory = user.watchHistory.filter(
+      (id) => id.toString() != videoId.toString()
+    );
   }
-  if(user.watchHistory.length>30){
-    user.watchHistory.shift()//remove the oldest
+  if (user.watchHistory.length > 30) {
+    user.watchHistory.shift(); //remove the oldest
   }
   user.watchHistory.push(videoId);
   await user.save();
@@ -370,29 +372,92 @@ const getSubscribedChannelVideo = asyncHandler(async (req, res) => {
     );
 });
 
-const getWatchedHistoryVideo=asyncHandler(async(req,res)=>{
+//get watch history of user
+const getWatchedHistoryVideo = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = 10;
 
-  const page=parseInt(req.query.page)||1;
-  const limit=10;
+  const skip = (page - 1) * 10;
 
-  const skip=(page-1)*10;
+  const userId = req.user?._id;
 
-
-  const userId=req.user?._id;
-
-  const user=await User.findById(userId).populate("watchHistory");
-  if(!user){
-    throw new ApiError(400,"User not found")
+  const user = await User.findById(userId).populate("watchHistory");
+  if (!user) {
+    throw new ApiError(400, "User not found");
   }
 
-  const total=user.watchHistory.length;
-  const paginatedHistory=user.watchHistory.slice(skip,skip+limit);
+  const total = user.watchHistory.length;
+  const paginatedHistory = user.watchHistory.slice(skip, skip + limit);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { page, total, data: paginatedHistory },
+        "Fetched user history"
+      )
+    );
+});
+
+//clear single video from history
+const clearSingleVideoHistory = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const userId = req.user?._id;
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+
+  const video = await Video.findById(videoId);
+
+  if (!video) {
+    throw new ApiError(400, "Video not found");
+  }
+  const videoInHistory = user.watchHistory.some(
+    (id) => id.toString() === videoId.toString()
+  );
+  if (videoInHistory) {
+    user.watchHistory = user.watchHistory.filter(
+      (id) => id.toString() != videoId.toString()
+    );
+    await user.save();
+  } else {
+    throw new ApiError(400, "Video is not in the watch history");
+  }
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, {}, `Removed ${videoId} from user watch history`)
+    );
+});
+
+//report video
+const reportVideo=asyncHandler(async(req,res)=>{
+  const {videoId}=req.params;
+  const userId=req.user?._id;
+  const {reason}=req.body
+
+  const video=await Video.findById(videoId);
+  if(!video){
+    throw new ApiError(400,"Video not found")
+  }
+
+  const alreadyReported=video.reportedBy.some((id)=>id.toString()===userId.toString());
+  if(alreadyReported){
+    throw new ApiError(400,"You have already reported this video");
+  }
+
+  video.isReported=true;
+  video.reportedBy.push(userId);
+  video.reportedReason=reason
+  await video.save();
 
   return res.status(200).json(
-    new ApiResponse(200,{page,total,data:paginatedHistory},"Fetched user history")
+    new ApiResponse(200,video,"Video successfully reported")
   )
-
-
 })
 
 export {
