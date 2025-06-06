@@ -4,6 +4,9 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/User.js";
 import { Comment } from "../models/Comment.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { calculateRecentScore } from "../utils/recentScore.js";
+import { calculatePopularScore } from "../utils/popularScore.js";
+import { calculateCommentPopularScore } from "../utils/calculateCommentPopularScore.js";
 
 //create comment
 const createComment = asyncHandler(async (req, res) => {
@@ -84,11 +87,12 @@ const deleteComment = asyncHandler(async (req, res) => {
   );
   await video.save();
 
+  const parentComment = await Comment.findOne({ replies: commentId });
 
-  const parentComment=await Comment.findOne({replies:commentId});
-
-  if(parentComment){
-    parentComment.replies=parentComment.replies.filter(id=>!id.equals(commentId));
+  if (parentComment) {
+    parentComment.replies = parentComment.replies.filter(
+      (id) => !id.equals(commentId)
+    );
   }
   await parentComment.save();
 
@@ -166,6 +170,88 @@ const updateComment = asyncHandler(async (req, res) => {
 //like and dislike comments
 
 //pagination and sorting comments
+const recentComments = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = 10;
+  const skip = (page - 1) * limit;
+  const { videoId } = req.params;
+
+  const videoUserWatching = await Video.findById(videoId).populate({
+    path: "comments",
+    populate: {
+      path: "owner",
+      select: "username avatar",
+    },
+  });
+  if (!videoUserWatching) {
+    throw new ApiError(400, "Video not found");
+  }
+
+  const comments = videoUserWatching.comments;
+
+  const commentWithScore = comments.map((comment) => {
+    const score = calculateRecentScore(comment.createdAt);
+    return { ...comment.toObject(), recentScore: score };
+  });
+
+  commentWithScore.sort((a, b) => b.recentScore - a.recentScore);
+  const paginatedRecentComments = commentWithScore.slice(skip, skip + limit);
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        comments: paginatedRecentComments,
+        total: commentWithScore.length,
+        page,
+        totalPages: Math.ceil(commentWithScore.length / limit),
+      },
+      "Fetched popular score"
+    )
+  );
+});
+
+const popularComments = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = 10;
+  const skip = (page - 1) * limit;
+  const { videoId } = req.params;
+
+  const videoUserWatching = await Video.findById(videoId).populate({
+    path: "comments",
+    populate: {
+      path: "owner",
+      select: "username avatar",
+    },
+  });
+
+  if (!videoUserWatching) {
+    throw new ApiError(400, "Video not found");
+  }
+  const comments = videoUserWatching.comments;
+
+  const commentWithScore = comments.map((comment) => {
+    const score = calculateCommentPopularScore({
+      replies: comment.replies.length,
+      likes: comment.likes.length,
+    });
+    return { ...comment.toObject(), popularScore: score };
+  });
+
+  commentWithScore.sort((a, b) => b.popularScore - a.popularScore);
+
+  const paginatedPopularComments = commentWithScore.slice(skip, skip + limit);
+  const pages = commentWithScore.length;
+
+  return res.status(200).json(
+    new ApiResponse(200, {
+      comments: paginatedPopularComments,
+      pages,
+      page,
+      totalPage: Math.ceil(pages / limit),
+    })
+  );
+});
 
 //reply to the comments
 const commentReplies = asyncHandler(async (req, res) => {
