@@ -273,6 +273,9 @@ const watchvideo = asyncHandler(async (req, res) => {
 
 //Get trending video
 const getTrendingVideo = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = 10;
+  const skip = (page - 1) * limit;
   const userId = req.user?._id;
 
   const user = await User.findById(userId);
@@ -284,9 +287,9 @@ const getTrendingVideo = asyncHandler(async (req, res) => {
 
   const videoWithScore = videos.map((video) => {
     const score = calculateTrendingScore({
-      views: video.views,
-      likes: video.likes.length,
-      comments: video.comments.length,
+      views: video.views || 0,
+      likes: video.likes?.length || 0,
+      comments: video.comments?.length || 0,
       createdAt: video.createdAt,
     });
     return { ...video.toObject(), trendingScore: score };
@@ -294,15 +297,24 @@ const getTrendingVideo = asyncHandler(async (req, res) => {
 
   videoWithScore.sort((a, b) => b.trendingScore - a.trendingScore);
 
-  const top20Trending = videoWithScore.slice(0, 20);
-
+  const paginatedTrendingVideo = videoWithScore.slice(skip, skip + limit);
+  const totalPage = Math.ceil(videoWithScore.length / limit);
   return res
     .status(200)
-    .json(new ApiResponse(200, top20Trending, "Top 20 trending video"));
+    .json(
+      new ApiResponse(
+        200,
+        { paginatedTrendingVideo, totalPage, page },
+        "Top 20 trending video"
+      )
+    );
 });
 
 //Get popular video
 const getPopularVideo = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = 10;
+  const skip = (page - 1) * limit;
   const videos = await Video.find();
 
   if (!videos) {
@@ -311,24 +323,34 @@ const getPopularVideo = asyncHandler(async (req, res) => {
 
   const videoPopularScore = videos.map((video) => {
     const score = calculatePopularScore({
-      views: video.views,
-      likes: video.likes.length,
-      comments: video.comments.length,
+      views: video.views || 0,
+      likes: video.likes.length || 0,
+      comments: video.comments.length || 0,
     });
 
     return { ...video.toObject(), popularScore: score };
   });
   videoPopularScore.sort((a, b) => b.popularScore - a.popularScore);
 
-  const top20Post = videoPopularScore.slice(0, 20);
+  const paginatedPopularVideo = videoPopularScore.slice(skip, skip + limit);
+  const totalPage = Math.ceil(videoPopularScore.length / limit);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, top20Post, "Fetched 20 popular post"));
+    .json(
+      new ApiResponse(
+        200,
+        { paginatedPopularVideo, totalPage, page },
+        "Fetched 20 popular post"
+      )
+    );
 });
 
 //get recent video
 const getRecentVideo = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = 10;
+  const skip = (page - 1) * limit;
   const videos = await Video.find();
 
   const videoWithScore = videos.map((video) => {
@@ -338,11 +360,18 @@ const getRecentVideo = asyncHandler(async (req, res) => {
 
   videoWithScore.sort((a, b) => a.recencyScore - b.recencyScore); //Sort array in ascending order
 
-  const top20RecentVideo = videoWithScore.slice(0, 20);
+  const paginatedRecentVideo = videoWithScore.slice(skip, skip + limit);
+  const totalPage = Math.ceil(videoWithScore.length / limit);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, top20RecentVideo, "20 recent post"));
+    .json(
+      new ApiResponse(
+        200,
+        { paginatedRecentVideo, totalPage, page },
+        "20 recent post"
+      )
+    );
 });
 
 //get subscribed channel video
@@ -447,7 +476,13 @@ const clearWatchHistory = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, user.watchHistory, "Cleared watch history successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        user.watchHistory,
+        "Cleared watch history successfully"
+      )
+    );
 });
 
 //report video
