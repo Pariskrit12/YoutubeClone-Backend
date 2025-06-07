@@ -434,31 +434,49 @@ const clearSingleVideoHistory = asyncHandler(async (req, res) => {
     );
 });
 
+//clear watch history
+const clearWatchHistory = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+
+  user.watchHistory = [];
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user.watchHistory, "Cleared watch history successfully"));
+});
+
 //report video
-const reportVideo=asyncHandler(async(req,res)=>{
-  const {videoId}=req.params;
-  const userId=req.user?._id;
-  const {reason}=req.body
+const reportVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const userId = req.user?._id;
+  const { reason } = req.body;
 
-  const video=await Video.findById(videoId);
-  if(!video){
-    throw new ApiError(400,"Video not found")
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(400, "Video not found");
   }
 
-  const alreadyReported=video.reportedBy.some((id)=>id.toString()===userId.toString());
-  if(alreadyReported){
-    throw new ApiError(400,"You have already reported this video");
+  const alreadyReported = video.reportedBy.some(
+    (id) => id.toString() === userId.toString()
+  );
+  if (alreadyReported) {
+    throw new ApiError(400, "You have already reported this video");
   }
 
-  video.isReported=true;
+  video.isReported = true;
   video.reportedBy.push(userId);
-  video.reportedReason=reason
+  video.reportedReason = reason;
   await video.save();
 
-  return res.status(200).json(
-    new ApiResponse(200,video,"Video successfully reported")
-  )
-})
+  return res
+    .status(200)
+    .json(new ApiResponse(200, video, "Video successfully reported"));
+});
 
 export {
   uploadVideo,
