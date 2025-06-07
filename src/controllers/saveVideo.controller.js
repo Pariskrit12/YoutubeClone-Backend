@@ -63,3 +63,15 @@ const unsaveVideo = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, video.title, "Video unsaved successfully"));
 });
+
+const getSavedVideoList=asyncHandler(async(req,res)=>{
+    const userId=req.user?._id;
+
+    const user=await User.findById(userId).populate("savedVideos");
+    if(!user){
+        throw new ApiError(400,"User not found")
+    }
+    return res.status(200).json(
+        new ApiResponse(200,user.savedVideos,"Fetched all saved video successfully")
+    )
+})
