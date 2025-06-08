@@ -7,7 +7,6 @@ import { videoDLQ } from "../queues/videoDLQ.js";
 import { redisOptions } from "../config/redis.js";
 import { sendNotification } from "../utils/notifyUser.js";
 
-
 //What it is doing?
 //Handles video and thumbnail upload
 //Trigger failure if title contains "fail"
@@ -48,25 +47,24 @@ const videoWorker = new Worker(
         thumbnailPublicId: thumbnailUpload?.public_id,
         tags,
       });
+      
       const channel = await Channel.findById(channelId);
       if (!channel) {
         throw new ApiError(400, "Channel not found");
       }
-      if(video){
-        video.status="published"
+      if (video) {
+        video.status = "published";
         await video.save();
       }
       channel.videos.push(video._id);
       await channel.save();
 
-
-
       //:TODO add nodemailer for send notification on the mail
       await sendNotification({
         userId,
-        subject:"Video uploaded successfully",
-        message:`Your video title ${title} is uploaded successfully`
-      })
+        subject: "Video uploaded successfully",
+        message: `Your video title ${title} is uploaded successfully`,
+      });
     } catch (error) {
       if (video && video._id) {
         job.data.videoId = video._id.toString();
@@ -74,6 +72,7 @@ const videoWorker = new Worker(
       console.log("Video Processing failed", error.message);
       throw error;
     }
+    return { videoId: video._id.toString() };
   },
   { connection: redisOptions } // Redis connection options for BullMQ
 );

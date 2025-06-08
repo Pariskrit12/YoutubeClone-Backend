@@ -2,7 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { Channel } from "../models/channel.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/User.js";
-import { videoQueue } from "../queues/videoQueue.js";
+import { videoQueue, videoQueueEvents } from "../queues/videoQueue.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Video } from "../models/Video.js";
 import { v2 as cloudinary } from "cloudinary";
@@ -11,7 +11,7 @@ import { redisClient } from "../config/redis.js";
 import { calculateTrendingScore } from "../utils/trendingScore.js";
 import { calculatePopularScore } from "../utils/popularScore.js";
 import { calculateRecentScore } from "../utils/recentScore.js";
-import { application } from "express";
+
 //Upload Video
 const uploadVideo = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
@@ -42,12 +42,12 @@ const uploadVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Thumbnail File required");
   }
 
-  const videoLocalPath = req.files?.videoUrl[0]?.path;
+  const videoLocalPath = req.files?.video[0]?.path;
   if (!videoLocalPath) {
     throw new ApiError(400, "Video file required");
   }
 
-  await videoQueue.add(
+  const job = await videoQueue.add(
     "processVideo",
     {
       userId,
@@ -61,7 +61,21 @@ const uploadVideo = asyncHandler(async (req, res) => {
     { attempts: 2, backoff: 5000, removeOnComplete: true, removeOnFail: false }
   );
 
-  res.status(202).json(new ApiResponse(200, "Video is being processed"));
+  try {
+    const result=await job.waitUntilFinished(videoQueueEvents);
+    const videoId = result.videoId;
+    return res
+      .status(200)
+      .json(new ApiResponse(200, videoId, "Uploaded successfully"));
+  } catch (error) {
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(500, "Video processing failed", {
+          error: error.message,
+        })
+      );
+  }
 });
 
 //Get Single Video
@@ -511,6 +525,43 @@ const reportVideo = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, video, "Video successfully reported"));
+});
+
+const searchVideo = asyncHandler(async (req, res) => {
+  const { query } = req.query;
+
+  if (!query || query.trim() === "") {
+    throw new ApiError(400, "Search query required");
+  }
+
+  const searchRegex = new RegExp(query, "i");
+
+  //  Search by title and description only (valid text fields)
+  const videos = await Video.find({
+    $or: [
+      { title: { $regex: searchRegex } },
+      { description: { $regex: searchRegex } },
+    ],
+  }).populate("channel", "channelName");
+
+  // : Filter videos where the channelName also matches the query
+  const filteredByChannel = videos.filter((video) =>
+    video.channel?.channelName?.toLowerCase().includes(query.toLowerCase())
+  );
+
+  //  Combine both results, avoiding duplicates
+  const finalVideos = [
+    ...videos,
+    ...filteredByChannel.filter(
+      (vid) => !videos.some((v) => v._id.toString() === vid._id.toString())
+    ),
+  ];
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, finalVideos, "Fetched searched video successfully")
+    );
 });
 
 export {
