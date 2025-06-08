@@ -42,7 +42,7 @@ const videoWorker = new Worker(
         channel: channelId,
         title,
         description,
-        videoUrl: videoUpload?.url || "",
+        video: videoUpload?.url || "",
         videoPublicId: videoUpload?.public_id,
         thumbnail: thumbnailUpload?.url || "",
         thumbnailPublicId: thumbnailUpload?.public_id,
@@ -52,7 +52,10 @@ const videoWorker = new Worker(
       if (!channel) {
         throw new ApiError(400, "Channel not found");
       }
-
+      if(video){
+        video.status="published"
+        await video.save();
+      }
       channel.videos.push(video._id);
       await channel.save();
 
