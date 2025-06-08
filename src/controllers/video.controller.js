@@ -564,6 +564,16 @@ const searchVideo = asyncHandler(async (req, res) => {
     );
 });
 
+const getAllVideo=asyncHandler(async(req,res)=>{
+  const videos=await Video.find();
+  if(!videos){
+    throw new ApiError(400,"Videos not found")
+  }
+  return res.status(200).json(
+    new ApiResponse(200,videos,"Successfully fetched video")
+  )
+})
+
 export {
   uploadVideo,
   getVideoInfo,
@@ -576,4 +586,5 @@ export {
   getTrendingVideo,
   getSubscribedChannelVideo,
   getWatchedHistoryVideo,
+  getAllVideo
 };
