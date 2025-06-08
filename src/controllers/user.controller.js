@@ -304,4 +304,5 @@ export {
   getUserInfo,
   updateUserInfo,
   updateUserAvatar,
+  changePassword
 };
