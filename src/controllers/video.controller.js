@@ -62,19 +62,17 @@ const uploadVideo = asyncHandler(async (req, res) => {
   );
 
   try {
-    const result=await job.waitUntilFinished(videoQueueEvents);
+    const result = await job.waitUntilFinished(videoQueueEvents);
     const videoId = result.videoId;
     return res
       .status(200)
       .json(new ApiResponse(200, videoId, "Uploaded successfully"));
   } catch (error) {
-    return res
-      .status(500)
-      .json(
-        new ApiResponse(500, "Video processing failed", {
-          error: error.message,
-        })
-      );
+    return res.status(500).json(
+      new ApiResponse(500, "Video processing failed", {
+        error: error.message,
+      })
+    );
   }
 });
 
@@ -564,15 +562,34 @@ const searchVideo = asyncHandler(async (req, res) => {
     );
 });
 
-const getAllVideo=asyncHandler(async(req,res)=>{
-  const videos=await Video.find();
-  if(!videos){
-    throw new ApiError(400,"Videos not found")
+const getAllVideo = asyncHandler(async (req, res) => {
+  const videos = await Video.find().populate("channel");
+  if (!videos) {
+    throw new ApiError(400, "Videos not found");
   }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, videos, "Successfully fetched video"));
+});
+
+const getAllSavedVideo = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+  const user = await User.findById(userId).populate({
+    path: "savedVideos",
+    populate: {
+      path: "channel",
+      select: "channelName avatar",
+    },
+  });
+
+  if(!user){
+    throw new ApiError(400,"User not found");
+  }
+
   return res.status(200).json(
-    new ApiResponse(200,videos,"Successfully fetched video")
+    new ApiResponse(200,user.savedVideos,"Saved video fetched successfully")
   )
-})
+});
 
 export {
   uploadVideo,
@@ -586,5 +603,6 @@ export {
   getTrendingVideo,
   getSubscribedChannelVideo,
   getWatchedHistoryVideo,
-  getAllVideo
+  getAllVideo,
+  getAllSavedVideo
 };
