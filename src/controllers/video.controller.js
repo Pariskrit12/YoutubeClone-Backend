@@ -422,7 +422,13 @@ const getWatchedHistoryVideo = asyncHandler(async (req, res) => {
 
   const userId = req.user?._id;
 
-  const user = await User.findById(userId).populate("watchHistory");
+  const user = await User.findById(userId).populate({
+    path: "watchHistory",
+    populate: {
+      path: "channel",
+      select: "channelName",
+    },
+  });
   if (!user) {
     throw new ApiError(400, "User not found");
   }
@@ -582,14 +588,35 @@ const getAllSavedVideo = asyncHandler(async (req, res) => {
     },
   });
 
-  if(!user){
-    throw new ApiError(400,"User not found");
+  if (!user) {
+    throw new ApiError(400, "User not found");
   }
 
-  return res.status(200).json(
-    new ApiResponse(200,user.savedVideos,"Saved video fetched successfully")
-  )
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, user.savedVideos, "Saved video fetched successfully")
+    );
 });
+
+const getLikedVideo=asyncHandler(async(req,res)=>{
+  const userId=req.user?._id;
+
+  const user=await User.findById(userId).populate({
+    path:"likedVideos",
+    populate:{
+      path:"channel",
+      select:"channelName"
+    }
+  });
+
+  if(!user){
+    throw new ApiError(400,"user not found");
+  }
+  return res.status(200).json(
+    new ApiResponse(200,user.likedVideos,"User liked video fetched successfully")
+  )
+})
 
 export {
   uploadVideo,
@@ -604,5 +631,7 @@ export {
   getSubscribedChannelVideo,
   getWatchedHistoryVideo,
   getAllVideo,
-  getAllSavedVideo
+  getAllSavedVideo,
+  clearWatchHistory,
+  getLikedVideo
 };
