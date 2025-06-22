@@ -41,10 +41,10 @@ const createComment = asyncHandler(async (req, res) => {
   if (!comment) {
     throw new ApiError(500, "Something went wrong");
   }
-
+ const createdComment=await Comment.findById(comment._id).populate("authorId");
   return res
     .status(201)
-    .json(new ApiResponse(200, comment, "Comment created successfully"));
+    .json(new ApiResponse(200, createdComment, "Comment created successfully"));
 });
 
 //delete comment
@@ -86,14 +86,14 @@ const deleteComment = asyncHandler(async (req, res) => {
   );
   await video.save();
 
-  const parentComment = await Comment.findOne({ replies: commentId });
+  // const parentComment = await Comment.findOne({ replies: commentId });
 
-  if (parentComment) {
-    parentComment.replies = parentComment.replies.filter(
-      (id) => !id.equals(commentId)
-    );
-  }
-  await parentComment.save();
+  // if (parentComment) {
+  //   parentComment.replies = parentComment.replies.filter(
+  //     (id) => !id.equals(commentId)
+  //   );
+  // }
+  // await parentComment.save();
 
   return res
     .status(200)
@@ -108,7 +108,7 @@ const getCommentOfVideo = asyncHandler(async (req, res) => {
     .populate({
       path: "comments",
       populate: [
-        { path: "authorId", select: "username" },
+        { path: "authorId" },
         {
           path: "replies",
           populate: { path: "authorId", select: "username" },
@@ -217,43 +217,55 @@ const likeComments = asyncHandler(async (req, res) => {
 });
 
 //dislike comments
-const dislikeComments=asyncHandler(async(req,res)=>{
-  const {commentId}=req.params;
-  const userId=req.user?._id;
+const dislikeComments = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+  const userId = req.user?._id;
 
-  const comment=await Comment.findById(commentId);
-  if(!comment){
-    throw new ApiError(400,"Comment not found")
+  const comment = await Comment.findById(commentId);
+  if (!comment) {
+    throw new ApiError(400, "Comment not found");
   }
 
-  const user=await User.findById(userId)
-  if(!user){
-    throw new ApiError(400,"User not found")
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
   }
 
-  const alreadyDisliked=comment.dislikes.some((id)=>id.toString()===userId.toString());
-  const isLiked=comment.likes.some((id)=>id.toString()===userId.toString());
+  const alreadyDisliked = comment.dislikes.some(
+    (id) => id.toString() === userId.toString()
+  );
+  const isLiked = comment.likes.some(
+    (id) => id.toString() === userId.toString()
+  );
 
-  if(alreadyDisliked){
-    comment.dislikes=comment.dislikes.filter((id)=>id.toString()!==userId.toString());
-    user.dislikedComments=user.dislikedComments.filter((id)=>id.toString()!==commentId.toString());
-  }else{
+  if (alreadyDisliked) {
+    comment.dislikes = comment.dislikes.filter(
+      (id) => id.toString() !== userId.toString()
+    );
+    user.dislikedComments = user.dislikedComments.filter(
+      (id) => id.toString() !== commentId.toString()
+    );
+  } else {
     comment.dislikes.push(userId);
     user.dislikedComments.push(commentId);
   }
 
-  if(isLiked){
-    comment.likes=comment.likes.filter((id)=>id.toString()!==userId.toString());
-    user.dislikedComments=user.dislikedComments.filter((id)=>id.toString()!==commentId.toString());
+  if (isLiked) {
+    comment.likes = comment.likes.filter(
+      (id) => id.toString() !== userId.toString()
+    );
+    user.dislikedComments = user.dislikedComments.filter(
+      (id) => id.toString() !== commentId.toString()
+    );
   }
 
   await user.save();
   await comment.save();
 
-  return res.status(200).json(
-    new ApiResponse(200,{},"Disliked successfully")
-  )
-})
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Disliked successfully"));
+});
 
 //pagination and sorting comments
 const recentComments = asyncHandler(async (req, res) => {
@@ -366,4 +378,35 @@ const commentReplies = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, reply, "Reply added successfully"));
 });
 
-//moderation features
+const reportComment = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+  const userId = req.user?._id;
+  const { reason } = req.body;
+
+  const comment = await Comment.findById(commentId);
+  if (!comment) {
+    throw new ApiError(400, "Comment not found");
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+  const alreadyReported = comment.reportedBy.some(
+    (id) => id.toString() === userId.toString()
+  );
+  if (alreadyReported) {
+    throw new ApiError(400, "You have already reported this comment");
+  }
+  comment.isReported = true;
+  comment.reportedReason = reason;
+  comment.reportedBy.push(userId);
+  await comment.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Successfully reported"));
+});
+
+export {createComment,getCommentOfVideo,deleteComment}
+

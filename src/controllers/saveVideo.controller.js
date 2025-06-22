@@ -1,7 +1,7 @@
 import { User } from "../models/User.js";
 import { Video } from "../models/Video.js";
 import { ApiError } from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/ApiResponse";
+import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const saveVideo = asyncHandler(async (req, res) => {
@@ -75,3 +75,8 @@ const getSavedVideoList=asyncHandler(async(req,res)=>{
         new ApiResponse(200,user.savedVideos,"Fetched all saved video successfully")
     )
 })
+
+export{
+  saveVideo,
+  unsaveVideo,getSavedVideoList
+}

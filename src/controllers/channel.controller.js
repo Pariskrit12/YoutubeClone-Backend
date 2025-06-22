@@ -258,6 +258,18 @@ const updateBannerofChannel = asyncHandler(async (req, res) => {
     .json(new ApiResponse(400, updatedChannel, "Channel updated Successfully"));
 });
 
+const getChannelVideo=asyncHandler(async(req,res)=>{
+  const {channelId}=req.params;
+
+  const channel=await Channel.findById(channelId).populate("videos");
+  if(!channel){
+    throw new ApiError(400,"Channel not found")
+  }
+  return res.status(200).json(
+    new ApiResponse(200,channel.videos,"Successfully fetched user channel")
+  )
+})
+
 export {
   createChannel,
   deleteChannel,
@@ -265,4 +277,5 @@ export {
   updateChannel,
   updateAvatarOfChannel,
   updateBannerofChannel,
+  getChannelVideo
 };

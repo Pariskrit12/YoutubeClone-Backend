@@ -166,7 +166,7 @@ const getPersonalInfo = asyncHandler(async (req, res) => {
 
   const user = await User.findById(userId)
     .select("-password -refreshToken")
-    .populate("channel");
+    .populate("channel").populate('savedVideos');
 
   if (!user) {
     throw new ApiError(400, "User not found");

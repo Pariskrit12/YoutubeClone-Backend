@@ -87,7 +87,7 @@ const getVideoInfo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Unauthorized access, please log in");
   }
 
-  const video = await Video.findById(videoId);
+  const video = await Video.findById(videoId).populate("channel");
   if (!video) {
     throw new ApiError(400, "Video not found");
   }
@@ -327,7 +327,10 @@ const getPopularVideo = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
-  const videos = await Video.find();
+  const videos = await Video.find().populate({
+    path: "channel",
+    select: "channelName",
+  });
 
   if (!videos) {
     throw new ApiError(400, "Videos not found");
@@ -545,8 +548,29 @@ const searchVideo = asyncHandler(async (req, res) => {
     $or: [
       { title: { $regex: searchRegex } },
       { description: { $regex: searchRegex } },
+      { tags: { $regex: searchRegex } },
     ],
   }).populate("channel", "channelName");
+
+  //sort based:title>description>tags
+  const sortVideos = videos.sort((a, b) => {
+    const aTitle = searchRegex.test(a.title);
+    const bTitle = searchRegex.test(b.title);
+    if (aTitle && !bTitle) return -1; // a comes before b
+    if (!aTitle && bTitle) return 1; // b comes after a
+
+    const aDescription = searchRegex.test(a.description);
+    const bDescription = searchRegex.test(b.description);
+    if (aDescription && !bDescription) return -1;
+    if (!aDescription && bDescription) return 1;
+
+    const aTags = a.tags?.some((tag) => searchRegex.test(tag));
+    const bTags = b.tags?.some((tag) => searchRegex.test(tag));
+    if (aTags && !bTags) return -1;
+    if (!aTags && bTags) return 1;
+
+    return 0; //equal
+  });
 
   // : Filter videos where the channelName also matches the query
   const filteredByChannel = videos.filter((video) =>
@@ -555,9 +579,9 @@ const searchVideo = asyncHandler(async (req, res) => {
 
   //  Combine both results, avoiding duplicates
   const finalVideos = [
-    ...videos,
+    ...sortVideos,
     ...filteredByChannel.filter(
-      (vid) => !videos.some((v) => v._id.toString() === vid._id.toString())
+      (vid) => !sortVideos.some((v) => v._id.toString() === vid._id.toString())
     ),
   ];
 
@@ -565,6 +589,30 @@ const searchVideo = asyncHandler(async (req, res) => {
     .status(200)
     .json(
       new ApiResponse(200, finalVideos, "Fetched searched video successfully")
+    );
+});
+
+const suggestVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  const currentVideo = await Video.findById(videoId);
+  if (!currentVideo) {
+    throw new ApiError(400, "Video not found");
+  }
+
+  const suggestedVideo = await Video.find({
+    _id: { $ne: videoId },
+    tags: { $in: currentVideo.tags },
+  }).populate("channel", "channelName");
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        suggestedVideo,
+        "Suggested video fetched successfully"
+      )
     );
 });
 
@@ -599,24 +647,30 @@ const getAllSavedVideo = asyncHandler(async (req, res) => {
     );
 });
 
-const getLikedVideo=asyncHandler(async(req,res)=>{
-  const userId=req.user?._id;
+const getLikedVideo = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
 
-  const user=await User.findById(userId).populate({
-    path:"likedVideos",
-    populate:{
-      path:"channel",
-      select:"channelName"
-    }
+  const user = await User.findById(userId).populate({
+    path: "likedVideos",
+    populate: {
+      path: "channel",
+      select: "channelName",
+    },
   });
 
-  if(!user){
-    throw new ApiError(400,"user not found");
+  if (!user) {
+    throw new ApiError(400, "user not found");
   }
-  return res.status(200).json(
-    new ApiResponse(200,user.likedVideos,"User liked video fetched successfully")
-  )
-})
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user.likedVideos,
+        "User liked video fetched successfully"
+      )
+    );
+});
 
 export {
   uploadVideo,
@@ -633,5 +687,7 @@ export {
   getAllVideo,
   getAllSavedVideo,
   clearWatchHistory,
-  getLikedVideo
+  getLikedVideo,
+  searchVideo,
+  suggestVideo
 };

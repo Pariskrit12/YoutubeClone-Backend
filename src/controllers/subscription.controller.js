@@ -80,7 +80,7 @@ const getSubscribedChannelOfLoggedInUser=asyncHandler(async(req,res)=>{
   }
 
   return res.status(200).json(
-    new ApiResponse(200,user,"Fetched the subscribed channel of user")
+    new ApiResponse(200,user.subscription,"Fetched the subscribed channel of user")
   )
 })
 
