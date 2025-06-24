@@ -7,6 +7,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
 import { Filter } from "bad-words";
+import { Video } from "../models/Video.js";
 
 const filter = new Filter();
 
@@ -109,8 +110,55 @@ const deleteChannel = asyncHandler(async (req, res) => {
   if (channel.bannerPublicId) {
     await cloudinary.uploader.destroy(channel.bannerPublicId);
   }
-  await Channel.findByIdAndDelete(channelId);
+  const videos = await Video.find({ channel: channelId });
 
+  const videoIds = videos.map((video) => video._id);
+
+  await Video.deleteMany({channel:channelId});
+
+  // await User.updateMany(
+  //   { savedVideos: { $in: videoIds } }, //This finds all User documents where the savedVideos array contains at least one element that is in the videoIds array.
+  //   { $pull: { savedVideos: { $in: videoIds } } } //it removes from the savedVideos array all elements that are in videoIds.
+  // );
+
+  // await User.updateMany(
+  //   { watchHistory: { $in: videoIds } },
+  //   { $pull: { watchHistory: { $in: videoIds } } }
+  // );
+
+  // await User.updateMany(
+  //   {
+  //     likedVideos: { $in: videoIds },
+  //   },
+  //   {
+  //     $pull: {
+  //       likedVideos: {
+  //         $in: videoIds,
+  //       },
+  //     },
+  //   }
+  // );
+
+  //simpler Version of the above query
+
+  await User.updateMany(
+    {
+      $or: [
+        { savedVideos: { $in: videoIds } },
+        { watchHistory: { $in: videoIds } },
+        { likedVideos: { $in: videoIds } },
+        { dislikedVideos: { $in: videoIds } },
+      ],
+    },
+    {
+      $pull: {
+        savedVideos: { $in: videoIds },
+        watchHistory: { $in: videoIds },
+        likedVideos: { $in: videoIds },
+        dislikedVideos: { $in: videoIds },
+      },
+    }
+  );
   user.channel = null; //remove the channel id from the userSchema
   await user.save();
 
@@ -189,6 +237,10 @@ const updateAvatarOfChannel = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar required");
   }
 
+  if (channel.avatarPublicId) {
+    await cloudinary.uploader.destroy(channel.avatarPublicId);
+  }
+
   const updatedChannel = await Channel.findByIdAndUpdate(
     channelId,
     {
@@ -241,6 +293,10 @@ const updateBannerofChannel = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Banner file required");
   }
 
+  if(channel.bannerPublicId){
+    await cloudinary.uploader.destroy(channel.bannerPublicId);
+  }
+
   const updatedChannel = await Channel.findByIdAndUpdate(
     channelId,
     {
@@ -258,17 +314,19 @@ const updateBannerofChannel = asyncHandler(async (req, res) => {
     .json(new ApiResponse(400, updatedChannel, "Channel updated Successfully"));
 });
 
-const getChannelVideo=asyncHandler(async(req,res)=>{
-  const {channelId}=req.params;
+const getChannelVideo = asyncHandler(async (req, res) => {
+  const { channelId } = req.params;
 
-  const channel=await Channel.findById(channelId).populate("videos");
-  if(!channel){
-    throw new ApiError(400,"Channel not found")
+  const channel = await Channel.findById(channelId).populate("videos");
+  if (!channel) {
+    throw new ApiError(400, "Channel not found");
   }
-  return res.status(200).json(
-    new ApiResponse(200,channel.videos,"Successfully fetched user channel")
-  )
-})
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, channel.videos, "Successfully fetched user channel")
+    );
+});
 
 export {
   createChannel,
@@ -277,5 +335,5 @@ export {
   updateChannel,
   updateAvatarOfChannel,
   updateBannerofChannel,
-  getChannelVideo
+  getChannelVideo,
 };
