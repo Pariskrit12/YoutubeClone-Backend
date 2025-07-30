@@ -48,9 +48,20 @@ const likeVideo = asyncHandler(async (req, res) => {
   await video.save();
   await user.save();
 
-  res
-    .status(200)
-    .json(new ApiResponse(200, video.likes, "Liked video successfully"));
+  const isLiked = video.likes.includes(userId.toString());
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        isLiked,
+        isDisliked: false,
+        likeCount: video.likes.length,
+        dislikeCount: video.dislikes.length,
+      },
+      "Liked video successfully"
+    )
+  );
 });
 
 //dislike video
@@ -94,9 +105,20 @@ const dislikeVideo = asyncHandler(async (req, res) => {
 
   await video.save();
   await user.save();
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Disliked successfully"));
+  const isDisliked = video.dislikes.includes(userId.toString());
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        video,
+        isDisliked,
+        isLiked: false,
+        likeCount: video.likes.length,
+        dislikeCount: video.dislikes.length,
+      },
+      "Disliked successfully"
+    )
+  );
 });
 
 //like comment
@@ -122,7 +144,7 @@ const likeComment = asyncHandler(async (req, res) => {
     (id) => id.toString() == userId.toString()
   );
   if (alreadyLiked) {
-    comment.likesComment = comment.likes.filter(
+    comment.likes = comment.likes.filter(
       (id) => id.toString() != userId.toString()
     );
     user.likedComments = user.likedComments.filter(
@@ -133,7 +155,7 @@ const likeComment = asyncHandler(async (req, res) => {
     user.likedComments.push(commentId);
   }
   if (isDisliked) {
-    comment.dislikesComment = comment.dislikes.filter(
+    comment.dislikes = comment.dislikes.filter(
       (id) => id.toString() != userId.toString()
     );
     user.dislikedComments = user.dislikedComments.filter(
@@ -142,10 +164,20 @@ const likeComment = asyncHandler(async (req, res) => {
   }
   await comment.save();
   await user.save();
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Liked comment successfully"));
+  const isLiked = user.likedComments.includes(commentId.toString());
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        isLiked,
+        commentId,
+        isDisliked: false,
+        likeCount: comment.likes.length,
+        dislikeCount: comment.dislikes.length,
+      },
+      "Liked comment successfully"
+    )
+  );
 });
 
 //dislike comment
@@ -169,7 +201,7 @@ const dislikeComment = asyncHandler(async (req, res) => {
     (id) => id.toString() == userId.toString()
   );
   if (alreadyDisliked) {
-    comment.dislikesComment = comment.dislikes.filter(
+    comment.dislikes = comment.dislikes.filter(
       (id) => id.toString() != userId.toString()
     );
     user.dislikedComments = user.dislikedComments.filter(
@@ -180,7 +212,7 @@ const dislikeComment = asyncHandler(async (req, res) => {
     user.dislikedComments.push(commentId);
   }
   if (isLiked) {
-    comment.likesComment = comment.likes.filter(
+    comment.likes = comment.likes.filter(
       (id) => id.toString() != userId.toString()
     );
     user.likedComments = user.likedComments.filter(
@@ -190,8 +222,20 @@ const dislikeComment = asyncHandler(async (req, res) => {
 
   await comment.save();
   await user.save();
-
-  return res.status(200).json(new ApiResponse(200, {}, "Disliked comment"));
+  const isDisliked = user.dislikedComments.includes(commentId.toString());
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        isDisliked,
+        isLiked: false,
+        likeCount: comment.likes.length,
+        dislikeCount: comment.dislikes.length,
+        commentId,
+      },
+      "Disliked comment"
+    )
+  );
 });
 
-export { likeVideo, dislikeVideo,likeComment,dislikeComment };
+export { likeVideo, dislikeVideo, likeComment, dislikeComment };

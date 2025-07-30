@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { Channel } from "../models/channel.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/User.js";
+import { Comment } from "../models/Comment.js";
 import { videoQueue, videoQueueEvents } from "../queues/videoQueue.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Video } from "../models/Video.js";
@@ -91,11 +92,16 @@ const getVideoInfo = asyncHandler(async (req, res) => {
   if (!video) {
     throw new ApiError(400, "Video not found");
   }
-
+  const isLiked = video.likes.includes(userId.toString());
+  const isDisliked = video.dislikes.includes(userId.toString());
   return res
     .status(200)
     .json(
-      new ApiResponse(200, video, "Information of video fetched successfully")
+      new ApiResponse(
+        200,
+        { video, isLiked, isDisliked },
+        "Information of video fetched successfully"
+      )
     );
 });
 
@@ -158,17 +164,18 @@ const updateVideoThumbnail = asyncHandler(async (req, res) => {
     throw new ApiError(400, "You cannot update this video thumbnail");
   }
 
-  if (video.thumbnailPublicId) {
-    await cloudinary.uploader.destroy(video.thumbnailPublicId);
-  }
-
-  const thumbnailLocalPath = req.file?.path;
+  const thumbnailLocalPath = await req.file?.path;
 
   if (!thumbnailLocalPath) {
     throw new ApiError(400, "Thumbnail file required");
   }
 
-  const thumbnail = await uploadOnCloudinary(thumbnaiLocalPath);
+  const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+
+  if (video.thumbnailPublicId) {
+    await cloudinary.uploader.destroy(video.thumbnailPublicId);
+  }
+
   if (!thumbnail) {
     throw new ApiError(400, "Failed to upload thumbnail");
   }
@@ -232,6 +239,26 @@ const deleteVideo = asyncHandler(async (req, res) => {
   }
 
   const deletedVideo = await Video.findByIdAndDelete(videoId);
+  await User.updateMany(
+    {
+      $or: [
+        { likedVideos: videoId },
+        { watchHistory: videoId },
+        { dislikedVideos: videoId },
+        { savedVideos: videoId },
+      ],
+    },
+    {
+      $pull: {
+        likedVideos: videoId,
+        watchHistory: videoId,
+        dislikedVideos: videoId,
+        savedVideos: videoId,
+      },
+    }
+  );
+
+  await Comment.deleteMany({ videoId: videoId });
   channel.videos = channel.videos.filter((id) => !id.equals(deletedVideo._id));
   await channel.save();
 
@@ -689,5 +716,5 @@ export {
   clearWatchHistory,
   getLikedVideo,
   searchVideo,
-  suggestVideo
+  suggestVideo,
 };

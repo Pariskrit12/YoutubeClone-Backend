@@ -41,7 +41,9 @@ const createComment = asyncHandler(async (req, res) => {
   if (!comment) {
     throw new ApiError(500, "Something went wrong");
   }
- const createdComment=await Comment.findById(comment._id).populate("authorId");
+  const createdComment = await Comment.findById(comment._id).populate(
+    "authorId"
+  );
   return res
     .status(201)
     .json(new ApiResponse(200, createdComment, "Comment created successfully"));
@@ -123,7 +125,13 @@ const getCommentOfVideo = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, video.comments, "Comment of the video fetched"));
+    .json(
+      new ApiResponse(
+        200,
+        { comments: video.comments },
+        "Comment of the video fetched"
+      )
+    );
 });
 
 //update comments
@@ -210,10 +218,20 @@ const likeComments = asyncHandler(async (req, res) => {
 
   await comment.save();
   await user.save();
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Liked comment successfully"));
+  const isLiked = user.likedComments.includes(commentId.toString());
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        isLiked,
+        commentId,
+        isDisliked: false,
+        likeCount: comment.likes.length,
+        dislikeCount: comment.dislikes.length,
+      },
+      "Liked comment successfully"
+    )
+  );
 });
 
 //dislike comments
@@ -381,6 +399,7 @@ const commentReplies = asyncHandler(async (req, res) => {
 const reportComment = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
   const userId = req.user?._id;
+
   const { reason } = req.body;
 
   const comment = await Comment.findById(commentId);
@@ -400,6 +419,7 @@ const reportComment = asyncHandler(async (req, res) => {
   }
   comment.isReported = true;
   comment.reportedReason = reason;
+  comment.isApproved = false;
   comment.reportedBy.push(userId);
   await comment.save();
 
@@ -408,5 +428,4 @@ const reportComment = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Successfully reported"));
 });
 
-export {createComment,getCommentOfVideo,deleteComment}
-
+export { createComment, getCommentOfVideo, deleteComment, reportComment };

@@ -1,8 +1,8 @@
 import { Comment } from "../models/Comment.js";
 import { User } from "../models/User.js";
 import { Video } from "../models/Video.js";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 //Get all Reported comments
@@ -102,12 +102,14 @@ const videoModeration = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, "Video moderated successfully"));
 });
 
-const getAllUsers=asyncHandler(async(req,res)=>{
-  const users=await User.find()
-  if(!users ||users.length===0){
-    throw new ApiError(400,"Users not found")
+const getAllUsers = asyncHandler(async (req, res) => {
+  const users = await User.find().populate("channel");
+  if (!users || users.length === 0) {
+    throw new ApiError(400, "Users not found");
   }
-  return res.status(200).json(
-     new ApiResponse(200,users,"Users fetched successfully")
-  )
-})
+  return res
+    .status(200)
+    .json(new ApiResponse(200, users, "Users fetched successfully"));
+});
+
+export { getAllUsers };

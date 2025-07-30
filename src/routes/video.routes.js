@@ -8,20 +8,24 @@ import {
   getAllSavedVideo,
   getAllVideo,
   getLikedVideo,
+  getPopularVideo,
   getSubscribedChannelVideo,
   getTrendingVideo,
   getVideoInfo,
   getWatchedHistoryVideo,
+  searchVideo,
+  suggestVideo,
   updateVideoInfo,
   updateVideoThumbnail,
   uploadVideo,
   watchvideo,
 } from "../controllers/video.controller.js";
-import { saveVideo } from "../controllers/saveVideo.controller.js";
+import { saveVideo, unsaveVideo } from "../controllers/saveVideo.controller.js";
 const router = Router();
 router.route("/get-all-video").get(getAllVideo);
 //protected routes
-router.route("/save-video/:videoId").post(verifyJwt, saveVideo);
+router.route("/save-video/:videoId").post(verifyJwt, saveVideo);//tested
+router.route('/unsave-video/:videoId').post(verifyJwt,unsaveVideo)
 router.route("/get-saved-video").get(verifyJwt, getAllSavedVideo);
 router.route("/get-watched-video").get(verifyJwt, getWatchedHistoryVideo); //tested;
 router
@@ -38,7 +42,10 @@ router.route("/update-video-info/:videoId").put(verifyJwt, updateVideoInfo); //t
 router.route("/get-info-video/:videoId").get(verifyJwt, getVideoInfo); //tested;
 router.route("/clear-watch-history").delete(verifyJwt,clearWatchHistory);//tested
 router.route("/get-trending-video").get(verifyJwt,getTrendingVideo);//tested'
-router.route("/get-liked-video").get(verifyJwt,getLikedVideo);
+router.route("/get-liked-video").get(verifyJwt,getLikedVideo);//tested
+router.route('/get-popular-video').get(verifyJwt,getPopularVideo)//tested
+router.route('/search-video').get(verifyJwt,searchVideo);//tested
+router.route('/suggest-video/:videoId').get(verifyJwt,suggestVideo);
 router.route("/upload-video/:channelId").post(
   verifyJwt,
   upload.fields([

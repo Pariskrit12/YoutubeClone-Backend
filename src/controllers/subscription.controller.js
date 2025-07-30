@@ -4,84 +4,115 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-
 //subscribe to channel
-const subscribeToChannel=asyncHandler(async(req,res)=>{
-    const userId=req.user?._id;
+const subscribeToChannel = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
 
-    const {channelId}=req.params
+  const { channelId } = req.params;
 
-    const user=await User.findById(userId);
+  const user = await User.findById(userId);
 
-    if(!user){
-        throw new ApiError(400,"User not found");
-    }
-    
-    const channel=await Channel.findById(channelId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
 
-    if(!channel){
-        throw new ApiError(400,"Channel not found");
-    }
+  const channel = await Channel.findById(channelId);
 
-    if(channel.owner.equals(userId)){
-        throw new ApiError(400,"You cannot subscribe to your own channel");
-    }
+  if (!channel) {
+    throw new ApiError(400, "Channel not found");
+  }
 
-    const isAlreadySubscribed= channel.subscribers.some(subscriber=>subscriber.equals(userId));//check the userid in the channel.subscribers, it returns boolean
-    if(!isAlreadySubscribed){
-        channel.subscribers.push(userId);
-        await channel.save();
+  if (channel.owner.equals(userId)) {
+    throw new ApiError(400, "You cannot subscribe to your own channel");
+  }
 
-        user.subscription.push(channelId);
-        await user.save();
-    }
-    return res.status(200).json(
-        new ApiResponse(200,{subscribedCount:channel.subscribers.length},"Subscribed successfully")
-    )
-})
+  const isAlreadySubscribed = channel.subscribers.some((subscriber) =>
+    subscriber.equals(userId)
+  ); //check the userid in the channel.subscribers, it returns boolean
+  if (!isAlreadySubscribed) {
+    channel.subscribers.push(userId);
+    await channel.save();
 
-const unsubscribeToChannel=asyncHandler(async(req,res)=>{
-    const userId=req.user._id;
+    user.subscription.push(channelId);
+    await user.save();
+  }
+  const isSubscribed = user.subscription.includes(channelId.toString());
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { isSubscribed, subCount: channel.subscribers.length },
+        "Subscribed successfully"
+      )
+    );
+});
 
-    const {channelId}=req.params;
+const unsubscribeToChannel = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
 
-    const user=await User.findById(userId);
-    if(!user){
-        throw new ApiError(400,"User not found")
-    }
+  const { channelId } = req.params;
 
-    const channel=await Channel.findById(channelId);
-    if(!channel){
-        throw new ApiError(400,"Channel not found");
-    }
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
 
-    const isSubscribed= channel.subscribers.some(subscriber=>subscriber.equals(userId));
+  const channel = await Channel.findById(channelId);
+  if (!channel) {
+    throw new ApiError(400, "Channel not found");
+  }
 
-    if(isSubscribed){
-        channel.subscribers=channel.subscribers.filter(subscriber=>!subscriber.equals(userId));//return the array without the userId
-        await channel.save();
+  const isSubscribed = channel.subscribers.some((subscriber) =>
+    subscriber.equals(userId)
+  );
 
-        user.subscription=user.subscription.filter(subscriber=>!subscriber.equals(channelId));
-        await user.save();
-    }
+  if (isSubscribed) {
+    channel.subscribers = channel.subscribers.filter(
+      (subscriber) => !subscriber.equals(userId)
+    ); //return the array without the userId
+    await channel.save();
 
-    return res.status(200).json(
-        new ApiResponse(200,{},"Unsubscribed successfully")
-    )
-})
-
-const getSubscribedChannelOfLoggedInUser=asyncHandler(async(req,res)=>{
-  const userId=req.user?._id;
-
-  const user=await User.findById(userId).populate("subscription")
-
-  if(!user){
-    throw new ApiError(400,"User not found")
+    user.subscription = user.subscription.filter(
+      (subscriber) => !subscriber.equals(channelId)
+    );
+    await user.save();
   }
 
   return res.status(200).json(
-    new ApiResponse(200,user.subscription,"Fetched the subscribed channel of user")
-  )
-})
+    new ApiResponse(
+      200,
+      {
+        isSubscribed: false,
+        subCount: channel.subscribers.length,
+      },
+      "Unsubscribed successfully"
+    )
+  );
+});
 
-export {subscribeToChannel,unsubscribeToChannel,getSubscribedChannelOfLoggedInUser}
+const getSubscribedChannelOfLoggedInUser = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+
+  const user = await User.findById(userId).populate("subscription");
+
+  if (!user) {
+    throw new ApiError(400, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user.subscription,
+        "Fetched the subscribed channel of user"
+      )
+    );
+});
+
+export {
+  subscribeToChannel,
+  unsubscribeToChannel,
+  getSubscribedChannelOfLoggedInUser,
+};

@@ -64,6 +64,12 @@ const commentSchema = new Schema(
       type: String,
       default: "",
     },
+    reportedBy: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   { timestamps: true }
 );

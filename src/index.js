@@ -5,15 +5,15 @@ import http from "http";
 import { videoWorker } from "./workers/videoWokers.js";
 import { dlqWorker } from "./workers/videoDLQwoker.js";
 import { Server } from "socket.io";
-dotenv.config({path:'./env'});
-const server=http.createServer(app);
-const io=new Server(server);
+dotenv.config({ path: "./env" });
+const server = http.createServer(app);
+const io = new Server(server);
 connectDB()
-.then(()=>{
-    server.listen(process.env.PORT||8000,()=>{
-        console.log(`Server connected successfully at port ${process.env.PORT} `);
-    })
-})
-.catch((err)=>{
-    console.log("MongoDB Failed to connect",err);
-})
+  .then(() => {
+    server.listen(process.env.PORT || 8000, () => {
+      console.log(`Server connected successfully at port ${process.env.PORT} `);
+    });
+  })
+  .catch((err) => {
+    console.log("MongoDB Failed to connect", err);
+  });

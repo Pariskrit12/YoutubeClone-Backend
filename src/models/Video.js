@@ -13,7 +13,7 @@ const videoSchema = new Schema(
       trim: true,
     },
 
-    videoUrl: {
+    video: {
       type: String,
       required: true,
     },
@@ -73,7 +73,33 @@ const videoSchema = new Schema(
       },
     ],
 
-    
+    isReported: {
+      type: Boolean,
+      default: false,
+    },
+    isApproved: {
+      type: Boolean,
+      default: true,
+    },
+    moderatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    reportedBy: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    moderationNotes: {
+      type: String,
+      default: "",
+    },
+    reportedReason: {
+      type: String,
+      default: "",
+    },
+
     // duration: {
     //   type: Number,
     //   default: 0,

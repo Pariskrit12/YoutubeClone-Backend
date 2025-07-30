@@ -169,6 +169,13 @@ const deleteChannel = asyncHandler(async (req, res) => {
 
 //get channel information
 const getChannelInfo = asyncHandler(async (req, res) => {
+  const userId=req.user?._id;
+
+  const user=await User.findById(userId);
+
+  if(!user){
+    throw new ApiError(400,"User not found");
+  }
   const { channelId } = req.params;
 
   const channel = await Channel.findById(channelId);
@@ -176,10 +183,10 @@ const getChannelInfo = asyncHandler(async (req, res) => {
   if (!channel) {
     throw new ApiError(400, "channel not found");
   }
-
+  const isSubscribed=channel.subscribers.includes(userId.toString());
   return res
     .status(201)
-    .json(new ApiResponse(200, channel, "Channel info fetched successfully"));
+    .json(new ApiResponse(200, {channel,isSubscribed,subCount:channel.subscribers.length}, "Channel info fetched successfully"));
 });
 
 //Update channel name,description
