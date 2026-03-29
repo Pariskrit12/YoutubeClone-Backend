@@ -6,7 +6,7 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     // Define how the uploaded file should be named
-    cb(null, file.originalname); // Use the original name of the uploaded file
+   cb(null, Date.now() + "-" + file.originalname); // Use the original name of the uploaded file
   },
 });
 
