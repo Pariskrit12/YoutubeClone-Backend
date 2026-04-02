@@ -399,33 +399,37 @@ const commentReplies = asyncHandler(async (req, res) => {
 const reportComment = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
   const userId = req.user?._id;
-
   const { reason } = req.body;
 
-  const comment = await Comment.findById(commentId);
-  if (!comment) {
-    throw new ApiError(400, "Comment not found");
+  if (!reason || reason.trim() === "") {
+    throw new ApiError(400, "Reason is required");
   }
 
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new ApiError(400, "User not found");
-  }
+  const comment = await Comment.findById(commentId);
+  if (!comment) throw new ApiError(404, "Comment not found");
+
+  comment.reportedBy = comment.reportedBy || [];
+
   const alreadyReported = comment.reportedBy.some(
-    (id) => id.toString() === userId.toString()
+    (report) => report.user.toString() === userId.toString()
   );
-  if (alreadyReported) {
-    throw new ApiError(400, "You have already reported this comment");
-  }
+  if (alreadyReported) throw new ApiError(400, "You have already reported this comment");
+
   comment.isReported = true;
-  comment.reportedReason = reason;
   comment.isApproved = false;
-  comment.reportedBy.push(userId);
+  comment.reportedReason = reason;
+
+  comment.reportedBy.push({
+    user: userId,
+    reason,
+    createdAt: new Date(),
+  });
+
   await comment.save();
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "Successfully reported"));
+    .json(new ApiResponse(200, comment, "Comment successfully reported"));
 });
 
 export { createComment, getCommentOfVideo, deleteComment, reportComment };

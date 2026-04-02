@@ -87,8 +87,10 @@ const videoSchema = new Schema(
     },
     reportedBy: [
       {
-        type: Schema.Types.ObjectId,
-        ref: "User",
+        user: { type: Schema.Types.ObjectId, ref: "User" },
+        username: { type: String },
+        reason: { type: String },
+        createdAt: { type: Date, default: Date.now },
       },
     ],
     moderationNotes: {
@@ -105,7 +107,7 @@ const videoSchema = new Schema(
     //   default: 0,
     // },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 videoSchema.index({ title: "text", description: "text" });
 videoSchema.index({ tags: 1 });

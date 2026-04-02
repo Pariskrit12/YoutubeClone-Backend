@@ -66,12 +66,13 @@ const commentSchema = new Schema(
     },
     reportedBy: [
       {
-        type: Schema.Types.ObjectId,
-        ref: "User",
+        user: { type: Schema.Types.ObjectId, ref: "User" },
+        reason: String,
+        createdAt: { type: Date, default: Date.now },
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Comment = mongoose.model("Comment", commentSchema);

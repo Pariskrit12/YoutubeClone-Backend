@@ -3,16 +3,19 @@ import { verifyJwt } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
 import {
+  clearSingleVideoHistory,
   clearWatchHistory,
   deleteVideo,
   getAllSavedVideo,
   getAllVideo,
   getLikedVideo,
   getPopularVideo,
+  getRecommendedVideos,
   getSubscribedChannelVideo,
   getTrendingVideo,
   getVideoInfo,
   getWatchedHistoryVideo,
+  reportVideo,
   searchVideo,
   suggestVideo,
   updateVideoInfo,
@@ -41,11 +44,14 @@ router
 router.route("/update-video-info/:videoId").put(verifyJwt, updateVideoInfo); //tested;
 router.route("/get-info-video/:videoId").get(verifyJwt, getVideoInfo); //tested;
 router.route("/clear-watch-history").delete(verifyJwt,clearWatchHistory);//tested
+router.route("/clear-single-video-history/:videoId").delete(verifyJwt,clearSingleVideoHistory);
 router.route("/get-trending-video").get(verifyJwt,getTrendingVideo);//tested'
 router.route("/get-liked-video").get(verifyJwt,getLikedVideo);//tested
 router.route('/get-popular-video').get(verifyJwt,getPopularVideo)//tested
 router.route('/search-video').get(verifyJwt,searchVideo);//tested
 router.route('/suggest-video/:videoId').get(verifyJwt,suggestVideo);
+router.route('/recommendations').get(verifyJwt,getRecommendedVideos);
+router.route('/report/:videoId').post(verifyJwt, reportVideo);
 router.route("/upload-video/:channelId").post(
   verifyJwt,
   upload.fields([

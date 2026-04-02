@@ -14,40 +14,64 @@ import { calculatePopularScore } from "../utils/popularScore.js";
 import { calculateRecentScore } from "../utils/recentScore.js";
 
 //Upload Video
+import mongoose from "mongoose";
+
 const uploadVideo = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
   const userId = req.user?._id;
   const { title, description, tags } = req.body;
 
+  // Validate required fields
   if (!title || !description || !tags) {
     throw new ApiError(400, "All fields required");
   }
 
+  // Validate channelId
+  if (!mongoose.Types.ObjectId.isValid(channelId)) {
+    throw new ApiError(400, "Invalid channel ID");
+  }
+
+  // Parse tags (since frontend sends JSON string)
+  let parsedTags;
+  try {
+    parsedTags = JSON.parse(tags);
+    if (!Array.isArray(parsedTags)) {
+      throw new Error("Tags must be an array");
+    }
+  } catch (err) {
+    throw new ApiError(400, "Tags must be a valid array");
+  }
+
+  // Find channel
   const channel = await Channel.findById(channelId);
   if (!channel) {
     throw new ApiError(400, "Channel not found");
   }
 
+  // Find user
   const user = await User.findById(userId);
   if (!user) {
     throw new ApiError(400, "User not found");
   }
 
+  // Check if user is owner of channel
   if (!channel.owner.equals(userId)) {
     throw new ApiError(400, "You cannot upload video on this channel");
   }
 
-  const thumbnailPath = req.files?.thumbnail[0]?.path;
-
+  // Check thumbnail file
+  const thumbnailPath = req.files?.thumbnail?.[0]?.path;
   if (!thumbnailPath) {
-    throw new ApiError(400, "Thumbnail File required");
+    throw new ApiError(400, "Thumbnail file required");
   }
 
-  const videoLocalPath = req.files?.video[0]?.path;
+  // Check video file
+  const videoLocalPath = req.files?.video?.[0]?.path;
   if (!videoLocalPath) {
     throw new ApiError(400, "Video file required");
   }
 
+  // Add job to video queue
   const job = await videoQueue.add(
     "processVideo",
     {
@@ -55,11 +79,11 @@ const uploadVideo = asyncHandler(async (req, res) => {
       channelId,
       title,
       description,
-      tags,
+      tags: parsedTags, // pass parsed array
       videoLocalPath,
       thumbnailPath,
     },
-    { attempts: 2, backoff: 5000, removeOnComplete: true, removeOnFail: false }
+    { attempts: 2, backoff: 5000, removeOnComplete: true, removeOnFail: false },
   );
 
   try {
@@ -72,11 +96,10 @@ const uploadVideo = asyncHandler(async (req, res) => {
     return res.status(500).json(
       new ApiResponse(500, "Video processing failed", {
         error: error.message,
-      })
+      }),
     );
   }
 });
-
 //Get Single Video
 const getVideoInfo = asyncHandler(async (req, res) => {
   const userId = req.user?._id;
@@ -100,8 +123,8 @@ const getVideoInfo = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         { video, isLiked, isDisliked },
-        "Information of video fetched successfully"
-      )
+        "Information of video fetched successfully",
+      ),
     );
 });
 
@@ -131,7 +154,7 @@ const updateVideoInfo = asyncHandler(async (req, res) => {
     {
       $set: updates,
     },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true },
   );
 
   if (!updatedVideo) {
@@ -141,7 +164,7 @@ const updateVideoInfo = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, updatedVideo, "Successfully updated video info")
+      new ApiResponse(200, updatedVideo, "Successfully updated video info"),
     );
 });
 
@@ -189,7 +212,7 @@ const updateVideoThumbnail = asyncHandler(async (req, res) => {
     {
       new: true,
       runValidators: true,
-    }
+    },
   );
 
   if (!updatedVideo) {
@@ -202,8 +225,8 @@ const updateVideoThumbnail = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         updatedVideo,
-        "Successfully updated thumbnail of video"
-      )
+        "Successfully updated thumbnail of video",
+      ),
     );
 });
 
@@ -255,7 +278,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
         dislikedVideos: videoId,
         savedVideos: videoId,
       },
-    }
+    },
   );
 
   await Comment.deleteMany({ videoId: videoId });
@@ -293,12 +316,12 @@ const watchvideo = asyncHandler(async (req, res) => {
     await redisClient.set(redisKey, "1", "EX", 3600); //1 hr TTL(Time to live)
   }
   const alreadyWatched = user.watchHistory.some(
-    (id) => id.toString() == videoId.toString()
+    (id) => id.toString() == videoId.toString(),
   );
 
   if (alreadyWatched) {
     user.watchHistory = user.watchHistory.filter(
-      (id) => id.toString() != videoId.toString()
+      (id) => id.toString() != videoId.toString(),
     );
   }
   if (user.watchHistory.length > 30) {
@@ -344,8 +367,8 @@ const getTrendingVideo = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         { paginatedTrendingVideo, totalPage, page },
-        "Top 20 trending video"
-      )
+        "Top 20 trending video",
+      ),
     );
 });
 
@@ -383,8 +406,8 @@ const getPopularVideo = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         { paginatedPopularVideo, totalPage, page },
-        "Fetched 20 popular post"
-      )
+        "Fetched 20 popular post",
+      ),
     );
 });
 
@@ -411,8 +434,8 @@ const getRecentVideo = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         { paginatedRecentVideo, totalPage, page },
-        "20 recent post"
-      )
+        "20 recent post",
+      ),
     );
 });
 
@@ -438,8 +461,8 @@ const getSubscribedChannelVideo = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         videos,
-        "Fetched subscribed channel video successfully"
-      )
+        "Fetched subscribed channel video successfully",
+      ),
     );
 });
 
@@ -472,8 +495,8 @@ const getWatchedHistoryVideo = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         { page, total, data: paginatedHistory },
-        "Fetched user history"
-      )
+        "Fetched user history",
+      ),
     );
 });
 
@@ -494,11 +517,11 @@ const clearSingleVideoHistory = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Video not found");
   }
   const videoInHistory = user.watchHistory.some(
-    (id) => id.toString() === videoId.toString()
+    (id) => id.toString() === videoId.toString(),
   );
   if (videoInHistory) {
     user.watchHistory = user.watchHistory.filter(
-      (id) => id.toString() != videoId.toString()
+      (id) => id.toString() != videoId.toString(),
     );
     await user.save();
   } else {
@@ -507,7 +530,7 @@ const clearSingleVideoHistory = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, {}, `Removed ${videoId} from user watch history`)
+      new ApiResponse(200, {}, `Removed ${videoId} from user watch history`),
     );
 });
 
@@ -528,8 +551,8 @@ const clearWatchHistory = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         user.watchHistory,
-        "Cleared watch history successfully"
-      )
+        "Cleared watch history successfully",
+      ),
     );
 });
 
@@ -539,21 +562,38 @@ const reportVideo = asyncHandler(async (req, res) => {
   const userId = req.user?._id;
   const { reason } = req.body;
 
-  const video = await Video.findById(videoId);
-  if (!video) {
-    throw new ApiError(400, "Video not found");
+  if (!reason) {
+    throw new ApiError(400, "Reason is required");
   }
 
-  const alreadyReported = video.reportedBy.some(
-    (id) => id.toString() === userId.toString()
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  const alreadyReported = video.reports?.some(
+    (report) => report.user.toString() === userId.toString(),
   );
+
   if (alreadyReported) {
     throw new ApiError(400, "You have already reported this video");
   }
 
   video.isReported = true;
-  video.reportedBy.push(userId);
-  video.reportedReason = reason;
+
+if (!video.reportedBy) {
+  video.reportedBy = [];
+}
+
+video.reportedBy.push({
+  user: userId,
+  username: req.user.username, // optional snapshot
+  reason,
+  createdAt: new Date(),
+});
+
+await video.save();
+
   await video.save();
 
   return res
@@ -601,21 +641,21 @@ const searchVideo = asyncHandler(async (req, res) => {
 
   // : Filter videos where the channelName also matches the query
   const filteredByChannel = videos.filter((video) =>
-    video.channel?.channelName?.toLowerCase().includes(query.toLowerCase())
+    video.channel?.channelName?.toLowerCase().includes(query.toLowerCase()),
   );
 
   //  Combine both results, avoiding duplicates
   const finalVideos = [
     ...sortVideos,
     ...filteredByChannel.filter(
-      (vid) => !sortVideos.some((v) => v._id.toString() === vid._id.toString())
+      (vid) => !sortVideos.some((v) => v._id.toString() === vid._id.toString()),
     ),
   ];
 
   return res
     .status(200)
     .json(
-      new ApiResponse(200, finalVideos, "Fetched searched video successfully")
+      new ApiResponse(200, finalVideos, "Fetched searched video successfully"),
     );
 });
 
@@ -638,8 +678,8 @@ const suggestVideo = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         suggestedVideo,
-        "Suggested video fetched successfully"
-      )
+        "Suggested video fetched successfully",
+      ),
     );
 });
 
@@ -670,7 +710,11 @@ const getAllSavedVideo = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, user.savedVideos, "Saved video fetched successfully")
+      new ApiResponse(
+        200,
+        user.savedVideos,
+        "Saved video fetched successfully",
+      ),
     );
 });
 
@@ -694,8 +738,91 @@ const getLikedVideo = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         user.likedVideos,
-        "User liked video fetched successfully"
-      )
+        "User liked video fetched successfully",
+      ),
+    );
+});
+const getRecommendedVideos = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const currentUser = await User.findById(userId);
+  if (!currentUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const similarUsers = await User.find({
+    _id: { $ne: userId },
+    $or: [
+      { likedVideos: { $in: currentUser.likedVideos } },
+      { watchHistory: { $in: currentUser.watchHistory } },
+      { savedVideos: { $in: currentUser.savedVideos } },
+    ],
+  });
+
+  let videoScores = {};
+
+  similarUsers.forEach((user) => {
+    user.likedVideos.forEach((videoId) => {
+      videoScores[videoId] = (videoScores[videoId] || 0) + 3;
+    });
+    user.watchHistory.forEach((videoId) => {
+      videoScores[videoId] = (videoScores[videoId] || 0) + 2;
+    });
+    user.savedVideos.forEach((videoId) => {
+      videoScores[videoId] = (videoScores[videoId] || 0) + 4;
+    });
+  });
+
+  
+  currentUser.likedVideos.forEach((id) => {
+    if (videoScores[id]) videoScores[id] *= 0.5; 
+  });
+  currentUser.watchHistory.forEach((id) => {
+    if (videoScores[id]) videoScores[id] *= 0.7;
+  });
+  currentUser.savedVideos.forEach((id) => {
+    if (videoScores[id]) videoScores[id] *= 0.5;
+  });
+
+  
+  let sortedVideoIds = Object.entries(videoScores)
+    .sort((a, b) => b[1] - a[1]) //descending ma sort garne
+    .map(([videoId]) => videoId);
+
+  
+  let videos = [];
+  if (sortedVideoIds.length > 0) {
+    videos = await Video.find({ _id: { $in: sortedVideoIds } }).populate(
+      "channel",
+      "channelName avatar",
+    );
+
+    const videoMap = {};
+    videos.forEach((v) => (videoMap[v._id.toString()] = v));
+    videos = sortedVideoIds.map((id) => videoMap[id]).filter(Boolean);
+  }
+
+  //new video user have not interacted with
+  const scoredVideoIdsSet = new Set(sortedVideoIds);
+  const newVideos = await Video.find({
+    status: "published",
+    _id: { $nin: Array.from(scoredVideoIdsSet) },
+  }).populate("channel", "channelName avatar");
+
+  videos = [...videos, ...newVideos];
+
+ //if no recommended video fallback to trending
+  if (videos.length === 0) {
+    videos = await Video.find({ status: "published" })
+      .sort({ views: -1 })
+      .limit(10)
+      .populate("channel", "channelName avatar");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, videos, "Recommended videos fetched successfully"),
     );
 });
 
@@ -717,4 +844,7 @@ export {
   getLikedVideo,
   searchVideo,
   suggestVideo,
+  getRecommendedVideos,
+  reportVideo,
+  clearSingleVideoHistory
 };
